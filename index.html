@@ -17,6 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap">
+
 <style>
 :root{
   --bg:#f3f1ec; --surface:#ffffff; --surface-2:#eceae4; --surface-3:#e3e0d8;
@@ -139,6 +140,11 @@ svg{display:block}
 .seg.r{background:linear-gradient(150deg,var(--r1),var(--r2))}
 .cell .dot{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;background:var(--faint)}
 .cell.done .dot{display:none}
+.goalbar{margin-top:8px;display:flex;flex-direction:column;gap:4px}
+.gb-track{height:5px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.gb-track i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--g2),var(--accent));
+  transition:width .5s cubic-bezier(.32,.72,0,1)}
+.gb-cap{font-size:9.5px;font-weight:700;color:var(--faint);letter-spacing:.03em}
 
 .add-btn{width:100%;padding:14px;border-radius:var(--radius);border:1.5px dashed var(--line-2);color:var(--muted);
   font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;background:transparent;transition:.2s}
@@ -202,6 +208,10 @@ svg{display:block}
 .field{margin-bottom:18px}
 .field > label{display:block;font-size:12.5px;font-weight:700;color:var(--ink-soft);margin-bottom:8px}
 .field .hint{font-size:12px;color:var(--muted);font-weight:500;margin-top:6px;line-height:1.4}
+.field .hint b{color:var(--ink-soft);font-weight:700}
+.esec{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-ink);
+  margin:20px 2px 12px;padding-top:16px;border-top:1px solid var(--line)}
+.esec .opt{color:var(--faint);font-weight:600;text-transform:none;letter-spacing:0}
 .inp{width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);
   color:var(--ink);outline:none;transition:.18s;font-weight:500}
 .inp:focus{border-color:var(--accent)}
@@ -367,6 +377,7 @@ select.inp{appearance:none;-webkit-appearance:none;
 <script>
 "use strict";
 
+
 /* ---------- Icons (monochrome line icons) ---------- */
 const ICONS={
   leaf:'<path d="M11 20.5C6.5 20.5 4 17 4 12.5 4 7 8.5 3.5 20 3.5c0 11-4 17-9 17z"/><path d="M5.5 20c3.5-4 6-8 8.5-12"/>',
@@ -431,7 +442,12 @@ function migrate(){
     if(h.schedule==='weekly'&&h.weeklyTarget==null)h.weeklyTarget=3;
     if(h.monthlyTarget==null)h.monthlyTarget=8;
     if(!h.weekdays)h.weekdays=[0,1,2,3,4];
-    if(h.goalDays==null)h.goalDays=0;
+    if(h.interval==null)h.interval=2;
+    if(!h.startDate)h.startDate=todayStr();
+    // split old single "goalDays" into rhythm (schedule) + separate end-goal
+    if(h.goalEnabled==null){h.goalEnabled=!!(h.goalDays>0);h.goalN=h.goalDays>0?h.goalDays:30;}
+    if(h.goalN==null)h.goalN=30;
+    if(h.celebrated==null)h.celebrated=false;
     if(!h.reminders)h.reminders={enabled:false,times:[]};
     if(!h.reminders.times)h.reminders.times=h.reminders.time?[h.reminders.time]:[];
     (h.situations||[]).forEach(s=>{if(!s.id)s.id=uid();});
@@ -465,31 +481,47 @@ function setE(hid,sid,date,v){
   if(v)S.entries[hid][sid][date]=v; else delete S.entries[hid][sid][date];
   save();
 }
+// Day result for goal/streak purposes.
+// 'g'  = day done (ALL situations decided, at least one green, rest orange)
+// 'o'  = all situations orange (excused → neutral, doesn't break, doesn't count)
+// 'r'  = at least one red (fail → breaks)
+// 'pending' = partially tracked (some situation still undecided)
+// undefined = nothing tracked at all
 function dayFull(h,date){
-  let anyR=false,anyG=false,setCount=0,oCount=0;
-  for(const s of h.situations){const v=getE(h.id,s.id,date);if(v===undefined)continue;
-    setCount++;if(v==='r')anyR=true;else if(v==='g')anyG=true;else if(v==='o')oCount++;}
-  if(setCount===0)return undefined;
-  if(anyR)return 'r'; if(anyG)return 'g'; if(oCount===setCount)return 'o'; return 'g';
+  let anyR=false,unset=0,green=0,orange=0,n=h.situations.length;
+  for(const s of h.situations){const v=getE(h.id,s.id,date);
+    if(v===undefined)unset++;else if(v==='r')anyR=true;else if(v==='g')green++;else orange++;}
+  if(unset===n)return undefined;
+  if(anyR)return 'r';
+  if(unset>0)return 'pending';
+  if(green===0)return 'o';
+  return 'g';
 }
 function isSchedDay(h,d){
   if(h.schedule==='weekdays')return h.weekdays.includes(wd(d));
-  return true;
+  if(h.schedule==='everyN'){const diff=Math.round((d-parse(h.startDate))/86400000);
+    return (((diff%h.interval)+h.interval)%h.interval)===0;}
+  return true; // daily, weekly, monthly: any day can be used
 }
 function dueToday(h){
   if(h.schedule==='daily')return true;
   if(h.schedule==='weekdays')return h.weekdays.includes(wd(today()));
+  if(h.schedule==='everyN')return isSchedDay(h,today());
   return false; // weekly/monthly are flexible, not a fixed daily duty
 }
 
 /* ---------- Streak / progress ---------- */
+// Streak = consecutive fulfilled scheduled days (orange excused/skipped,
+// today counted only once done; a missed/failed past scheduled day breaks it).
 function streak(h){
   let n=0;let d=today();
-  if(dayFull(h,ds(d))===undefined)d=addDays(d,-1);
-  for(let i=0;i<500;i++){
+  for(let i=0;i<800;i++){
     if(!isSchedDay(h,d)){d=addDays(d,-1);continue;}
-    const st=dayFull(h,ds(d));
-    if(st==='g')n++; else if(st==='o'){} else break;
+    const st=dayFull(h,ds(d));const isToday=ds(d)===todayStr();
+    if(st==='g')n++;
+    else if(st==='o'){/* excused – skip */}
+    else if((st==='pending'||st===undefined)&&isToday){/* today not finished – skip */}
+    else break; // red, or a past day that was missed / left incomplete
     d=addDays(d,-1);
   }
   return n;
@@ -497,17 +529,35 @@ function streak(h){
 function weekGreens(h,mon){mon=mon||mondayOf(today());let c=0;for(let i=0;i<7;i++)if(dayFull(h,ds(addDays(mon,i)))==='g')c++;return c;}
 function monthGreens(h,d){const y=d.getFullYear(),m=d.getMonth(),days=new Date(y,m+1,0).getDate();let c=0;
   for(let i=1;i<=days;i++)if(dayFull(h,ds(new Date(y,m,i)))==='g')c++;return c;}
-function goalMetNow(h){
-  if(h.schedule==='weekly')return weekGreens(h)>=h.weeklyTarget;
-  if(h.schedule==='monthly')return monthGreens(h,today())>=h.monthlyTarget;
-  return h.goalDays>0 && streak(h)>=h.goalDays;
+// Consecutive weeks/months in which the frequency target was reached.
+function weekMet(h,mon){return weekGreens(h,mon)>=h.weeklyTarget;}
+function weekStreak(h){let mon=mondayOf(today());if(!weekMet(h,mon))mon=addDays(mon,-7);
+  let n=0;for(let i=0;i<300;i++){if(weekMet(h,mon)){n++;mon=addDays(mon,-7);}else break;}return n;}
+function monthMet(h,d){return monthGreens(h,d)>=h.monthlyTarget;}
+function monthStreak(h){let d=new Date(today().getFullYear(),today().getMonth(),1);
+  if(!monthMet(h,d))d=new Date(d.getFullYear(),d.getMonth()-1,1);
+  let n=0;for(let i=0;i<160;i++){if(monthMet(h,d)){n++;d=new Date(d.getFullYear(),d.getMonth()-1,1);}else break;}return n;}
+// End-goal (milestone): "N periods in a row", period = day / week / month by rhythm.
+function goalCurrent(h){
+  if(h.schedule==='weekly')return weekStreak(h);
+  if(h.schedule==='monthly')return monthStreak(h);
+  return streak(h);
 }
+function goalUnit(h){
+  if(h.schedule==='weekly')return h.goalN===1?'Woche in Folge':'Wochen in Folge';
+  if(h.schedule==='monthly')return h.goalN===1?'Monat in Folge':'Monate in Folge';
+  return 'Tage am Stück';
+}
+function goalMet(h){return !!(h.goalEnabled&&h.goalN>0&&goalCurrent(h)>=h.goalN);}
+function goalProgress(h){if(!h.goalEnabled||!h.goalN)return null;return {cur:goalCurrent(h),total:h.goalN,unit:goalUnit(h)};}
 function goalText(h){
-  const s=h.situations.length>1?` · ${h.situations.length} Situationen`:'';
-  if(h.schedule==='weekly')return `${h.weeklyTarget}× pro Woche`+s;
-  if(h.schedule==='monthly')return `${h.monthlyTarget}× pro Monat`+s;
-  if(h.schedule==='weekdays')return (h.weekdays.length===7?'Jeden Tag':h.weekdays.slice().sort((a,b)=>a-b).map(i=>DAYS_SHORT[i]).join('·'))+s;
-  return 'Jeden Tag'+(h.goalDays?` · Ziel ${h.goalDays} Tage`:'')+s;
+  let base;
+  if(h.schedule==='everyN')base=h.interval<=1?'Jeden Tag':('Alle '+h.interval+' Tage');
+  else if(h.schedule==='weekly')base=`${h.weeklyTarget}× pro Woche`;
+  else if(h.schedule==='monthly')base=`${h.monthlyTarget}× pro Monat`;
+  else if(h.schedule==='weekdays')base=h.weekdays.length===7?'Jeden Tag':h.weekdays.slice().sort((a,b)=>a-b).map(i=>DAYS_SHORT[i]).join('·');
+  else base='Jeden Tag';
+  return base+(h.situations.length>1?` · ${h.situations.length} Situationen`:'');
 }
 function chipData(h){
   if(h.schedule==='weekly'){const g=weekGreens(h);return{txt:g+'/'+h.weeklyTarget,on:g>=h.weeklyTarget,icon:g>=h.weeklyTarget?'check':'week'};}
@@ -522,15 +572,10 @@ const CHIPICON={
 
 /* ---------- Celebration ---------- */
 function maybeCelebrate(h){
-  let msg=null;
-  if(h.schedule==='weekly'){const wk=weekKey(today());
-    if(weekGreens(h)>=h.weeklyTarget){if(h.celebW!==wk){h.celebW=wk;msg='Wochenziel erreicht!';}}else if(h.celebW===wk)h.celebW=null;
-  }else if(h.schedule==='monthly'){const mk=monthKey(today());
-    if(monthGreens(h,today())>=h.monthlyTarget){if(h.celebM!==mk){h.celebM=mk;msg='Monatsziel erreicht!';}}else if(h.celebM===mk)h.celebM=null;
-  }else if(h.goalDays>0){const st=streak(h);
-    if(st>=h.goalDays){if(h.celebS!==h.goalDays){h.celebS=h.goalDays;msg=h.goalDays+'-Tage-Ziel erreicht!';}}else if(st<h.goalDays)h.celebS=0;
-  }
-  if(msg){save();celebrate(h.name+': '+msg);}
+  if(!h.goalEnabled||!h.goalN)return;
+  if(goalMet(h)){
+    if(!h.celebrated){h.celebrated=true;save();celebrate(h.name+': Ziel erreicht – '+h.goalN+' '+goalUnit(h)+'!');}
+  }else if(h.celebrated){h.celebrated=false;save();}
 }
 function celebrate(text){
   toast('🎉 '+text,true);
@@ -603,6 +648,7 @@ function renderTrack(){
 
   S.habits.forEach(h=>{
     const c=chipData(h);
+    const gp=goalProgress(h);
     let days='';
     for(let i=0;i<7;i++){
       const d=addDays(mon,i);const date=ds(d);
@@ -622,7 +668,10 @@ function renderTrack(){
         <div class="card-name"><h3>${esc(h.name)}</h3><div class="goal">${goalText(h)}</div></div>
         <div class="chip-streak ${c.on?'on':''}"><svg viewBox="0 0 24 24">${CHIPICON[c.icon]}</svg>${c.txt}</div>
       </div>
-      <div class="week">${days}</div></div>`;
+      <div class="week">${days}</div>
+      ${gp?`<div class="goalbar"><div class="gb-track"><i style="width:${Math.min(100,gp.total?gp.cur/gp.total*100:0)}%"></i></div>
+        <div class="gb-cap">Ziel · ${Math.min(gp.cur,gp.total)}/${gp.total} ${gp.unit}${gp.cur>=gp.total?' · erreicht 🎉':''}</div></div>`:''}
+    </div>`;
   });
   html+=`<button class="add-btn" onclick="openHabitEditor()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Neue Gewohnheit</button>`;
   el.innerHTML=html;
@@ -669,8 +718,9 @@ function clearDay(){const h=S.habits.find(x=>x.id===curDay.hid);
 let draft=null;
 function openHabitEditor(hid){
   const h=hid?S.habits.find(x=>x.id===hid):null;
-  draft=h?JSON.parse(JSON.stringify(h)):{id:null,name:'',icon:'leaf',schedule:'daily',weekdays:[0,1,2,3,4],
-    weeklyTarget:3,monthlyTarget:8,goalDays:30,situations:[{id:uid(),name:'Standard'}],reminders:{enabled:false,times:[]}};
+  draft=h?JSON.parse(JSON.stringify(h)):{id:null,name:'',icon:'leaf',schedule:'daily',interval:2,weekdays:[0,1,2,3,4],
+    weeklyTarget:3,monthlyTarget:8,startDate:todayStr(),goalEnabled:false,goalN:30,celebrated:false,
+    situations:[{id:uid(),name:'Standard'}],reminders:{enabled:false,times:[]}};
   document.getElementById('sheetTitle').textContent=h?'Bearbeiten':'Neue Gewohnheit';
   renderEditor();showSheet();
 }
@@ -682,52 +732,75 @@ function renderEditor(){
     ${d.situations.length>1?`<button class="del" onclick="draft.situations.splice(${i},1);renderEditor()"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m2 0v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7"/></svg></button>`:''}
   </div>`).join('');
 
-  let goalCtrl='';
-  if(d.schedule==='weekly'){
-    goalCtrl=`<div style="margin-top:13px" class="stepper">
+  // --- Rhythmus control (per schedule) ---
+  let rhythmCtrl='';
+  if(d.schedule==='everyN'){
+    rhythmCtrl=`<div style="margin-top:13px" class="stepper">
+      <button onclick="draft.interval=Math.max(2,draft.interval-1);renderEditor()">−</button>
+      <div class="val">${d.interval}</div><div class="unit">Tage Abstand</div>
+      <button style="margin-left:auto" onclick="draft.interval=Math.min(30,draft.interval+1);renderEditor()">+</button></div>`;
+  }else if(d.schedule==='weekdays'){
+    const wds=DAYS_SHORT.map((n,i)=>`<button class="${d.weekdays.includes(i)?'sel':''}" onclick="toggleWd(${i})">${n}</button>`).join('');
+    rhythmCtrl=`<div class="wd-pick" style="margin-top:13px">${wds}</div>`;
+  }else if(d.schedule==='weekly'){
+    rhythmCtrl=`<div style="margin-top:13px" class="stepper">
       <button onclick="draft.weeklyTarget=Math.max(1,draft.weeklyTarget-1);renderEditor()">−</button>
       <div class="val">${d.weeklyTarget}</div><div class="unit">mal pro Woche</div>
       <button style="margin-left:auto" onclick="draft.weeklyTarget=Math.min(7,draft.weeklyTarget+1);renderEditor()">+</button></div>`;
   }else if(d.schedule==='monthly'){
-    goalCtrl=`<div style="margin-top:13px" class="stepper">
+    rhythmCtrl=`<div style="margin-top:13px" class="stepper">
       <button onclick="draft.monthlyTarget=Math.max(1,draft.monthlyTarget-1);renderEditor()">−</button>
       <div class="val">${d.monthlyTarget}</div><div class="unit">mal pro Monat</div>
-      <button style="margin-left:auto" onclick="draft.monthlyTarget=Math.min(31,draft.monthlyTarget+1);renderEditor()">+</button></div>`;
-  }else if(d.schedule==='weekdays'){
-    const wds=DAYS_SHORT.map((n,i)=>`<button class="${d.weekdays.includes(i)?'sel':''}" onclick="toggleWd(${i})">${n}</button>`).join('');
-    goalCtrl=`<div class="wd-pick" style="margin-top:13px">${wds}</div>
-      <div style="margin-top:14px" class="stepper">
-        <button onclick="draft.goalDays=Math.max(0,draft.goalDays-1);renderEditor()">−</button>
-        <div class="val">${d.goalDays||'∞'}</div><div class="unit">Tage am Stück</div>
-        <button style="margin-left:auto" onclick="draft.goalDays=(draft.goalDays||0)+1;renderEditor()">+</button></div>
-      <div class="hint">Streak-Ziel über die gewählten Tage. 0 = kein festes Ziel.</div>`;
-  }else{
-    goalCtrl=`<div style="margin-top:13px" class="stepper">
-      <button onclick="draft.goalDays=Math.max(0,draft.goalDays-1);renderEditor()">−</button>
-      <div class="val">${d.goalDays||'∞'}</div><div class="unit">Tage am Stück</div>
-      <button style="margin-left:auto" onclick="draft.goalDays=(draft.goalDays||0)+1;renderEditor()">+</button></div>
-      <div class="hint">Du wirst benachrichtigt, wenn du dein Ziel erreichst – danach läuft es einfach weiter. 0 = kein festes Ziel.</div>`;
+      <button style="margin-left:auto" onclick="draft.monthlyTarget=Math.min(28,draft.monthlyTarget+1);renderEditor()">+</button></div>`;
   }
+
+  // --- End-goal control ---
+  const gUnit=d.schedule==='weekly'?'Wochen in Folge':d.schedule==='monthly'?'Monate in Folge':'Tage am Stück';
+  const goalCtrl=d.goalEnabled?`
+    <div style="margin-top:13px" class="stepper">
+      <button onclick="draft.goalN=Math.max(1,draft.goalN-1);renderEditor()">−</button>
+      <div class="val">${d.goalN}</div><div class="unit">${gUnit}</div>
+      <button style="margin-left:auto" onclick="draft.goalN=draft.goalN+1;renderEditor()">+</button></div>
+    <div class="hint" style="margin-top:8px">🎉 Du wirst benachrichtigt, sobald du das erreichst – danach läuft der Habit normal weiter.</div>`:'';
 
   document.getElementById('sheetBody').innerHTML=`
     <div class="field"><label>Name</label>
       <input class="inp" value="${esc(d.name)}" placeholder="z. B. Meditieren" oninput="draft.name=this.value"></div>
     <div class="field"><label>Symbol</label><div class="icon-pick">${icons}</div></div>
-    <div class="field"><label>Ziel</label>
+
+    <div class="esec">Rhythmus</div>
+    <div class="field" style="margin-bottom:14px">
       <select class="inp" onchange="setSchedule(this.value)">
         <option value="daily" ${d.schedule==='daily'?'selected':''}>Jeden Tag</option>
+        <option value="everyN" ${d.schedule==='everyN'?'selected':''}>Alle paar Tage</option>
         <option value="weekdays" ${d.schedule==='weekdays'?'selected':''}>Bestimmte Wochentage</option>
         <option value="weekly" ${d.schedule==='weekly'?'selected':''}>X-mal pro Woche</option>
         <option value="monthly" ${d.schedule==='monthly'?'selected':''}>X-mal pro Monat</option>
-      </select>${goalCtrl}</div>
+      </select>${rhythmCtrl}
+      <div class="hint" style="margin-top:10px">Wie oft du die Gewohnheit tun willst, damit du im Soll bist.</div>
+    </div>
+
     <div class="field"><label>Situationen am Tag</label>
-      <div class="hint" style="margin:-2px 0 10px">Mehrere Zeitpunkte, z. B. „Morgens" und „Abends". Jede wird einzeln getrackt.</div>
+      <div class="hint" style="margin:-2px 0 10px">Mehrere Zeitpunkte, z. B. „Morgens" und „Abends". <b>Ein Tag zählt erst als erledigt, wenn alle Situationen grün sind</b> (Orange = entschuldigt).</div>
       ${sits}
       <button class="add-inline" onclick="draft.situations.push({id:uid(),name:''});renderEditor()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Situation hinzufügen</button></div>
+
+    <div class="esec">Endziel<span class="opt"> · optional</span></div>
+    <div class="field">
+      <div class="hint" style="margin:-2px 0 10px">Der Meilenstein, ab dem die Gewohnheit „sitzt" – z. B. 30 Tage am Stück oder 4 Wochen in Folge.</div>
+      <div class="seg-toggle">
+        <button class="${!d.goalEnabled?'sel':''}" onclick="draft.goalEnabled=false;renderEditor()">Kein festes Ziel</button>
+        <button class="${d.goalEnabled?'sel':''}" onclick="draft.goalEnabled=true;renderEditor()">Ziel setzen</button>
+      </div>${goalCtrl}
+    </div>
+
     <button class="primary" onclick="saveHabit()">${d.id?'Speichern':'Gewohnheit anlegen'}</button>
     ${d.id?`<button class="danger-btn" onclick="deleteHabit()">Gewohnheit löschen</button>`:''}`;
 }
-function setSchedule(v){draft.schedule=v;if(v==='weekdays'&&!draft.weekdays.length)draft.weekdays=[0,1,2,3,4];renderEditor();}
+function setSchedule(v){draft.schedule=v;
+  if(v==='weekdays'&&!draft.weekdays.length)draft.weekdays=[0,1,2,3,4];
+  if(v==='everyN'){if(!draft.interval||draft.interval<2)draft.interval=2;draft.startDate=todayStr();}
+  renderEditor();}
 function toggleWd(i){const a=draft.weekdays;const idx=a.indexOf(i);if(idx>=0)a.splice(idx,1);else a.push(i);renderEditor();}
 function saveHabit(){
   const d=draft;if(!d.name.trim()){toast('Bitte einen Namen eingeben');return;}
@@ -738,6 +811,7 @@ function saveHabit(){
   if(d._fromIdea){S.ideas=S.ideas.filter(i=>i.id!==d._fromIdea);delete d._fromIdea;}
   if(!isNew){const idx=S.habits.findIndex(x=>x.id===d.id);S.habits[idx]=d;}
   else{d.id=uid();S.habits.push(d);}
+  d.celebrated=goalMet(d);   // avoid re-celebrating an already-met goal on the next check
   save();hideSheet();renderTrack();scheduleNotifs();toast(isNew?'Angelegt':'Gespeichert');
 }
 function deleteHabit(){if(!confirm('Diese Gewohnheit und alle Einträge löschen?'))return;
