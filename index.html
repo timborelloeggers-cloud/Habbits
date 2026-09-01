@@ -113,6 +113,9 @@ svg{display:block}
   transition:transform .2s cubic-bezier(.34,1.5,.5,1),box-shadow .2s}
 .card:active{transform:scale(.985)}
 .card-top{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.card-open{flex:1;min-width:0;display:flex;align-items:center;gap:9px;text-align:left;
+  border-radius:10px;padding:2px;margin:-2px;transition:transform .2s cubic-bezier(.34,1.5,.5,1),background .2s}
+.card-open:active{transform:scale(.97);background:var(--surface-2)}
 .ico-tile{width:29px;height:29px;border-radius:9px;background:var(--accent-soft);display:grid;place-items:center;flex-shrink:0}
 .ico-tile svg{width:17px;height:17px;stroke:var(--accent-ink);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .card-name{flex:1;min-width:0}
@@ -668,8 +671,10 @@ function renderTrack(){
     }
     html+=`<div class="card">
       <div class="card-top">
-        <div class="ico-tile">${svgIcon(h.icon)}</div>
-        <div class="card-name"><h3>${esc(h.name)}</h3><div class="goal">${goalText(h)}</div></div>
+        <button class="card-open" onclick="openHabitEditor('${h.id}')" aria-label="${esc(h.name)} bearbeiten">
+          <div class="ico-tile">${svgIcon(h.icon)}</div>
+          <div class="card-name"><h3>${esc(h.name)}</h3><div class="goal">${goalText(h)}</div></div>
+        </button>
         <div class="chip-streak ${c.on?'on':''}"><svg viewBox="0 0 24 24">${CHIPICON[c.icon]}</svg>${c.txt}</div>
       </div>
       <div class="week">${days}</div>
