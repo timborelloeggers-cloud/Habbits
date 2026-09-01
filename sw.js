@@ -1,5 +1,5 @@
 /* Cadence service worker – offline app shell */
-const CACHE = 'cadence-v2';
+const CACHE = 'cadence-v3';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest',
   './icon-192.png', './icon-512.png', './apple-touch-icon.png'
