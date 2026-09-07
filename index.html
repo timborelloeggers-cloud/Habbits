@@ -118,6 +118,49 @@ svg{display:block}
 .card-open:active{transform:scale(.97);background:var(--surface-2)}
 .card-chev{width:15px;height:15px;flex-shrink:0;stroke:var(--faint);fill:none;stroke-width:2.2;
   stroke-linecap:round;stroke-linejoin:round;margin-left:1px}
+
+/* ---- groups ---- */
+.group-card{border-color:var(--line-2)}
+.grp-members{font-size:11px;font-weight:600;color:var(--muted);line-height:1.35;margin:-2px 0 8px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.grp-check{width:30px;height:30px;flex-shrink:0;border-radius:9px;background:var(--surface-2);display:grid;
+  place-items:center;transition:transform .22s cubic-bezier(.34,1.6,.5,1),background .2s}
+.grp-check svg{width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.grp-check.on{background:linear-gradient(150deg,var(--g1),var(--g2))}
+.grp-check.on svg{stroke:#fff}
+.grp-check:active{transform:scale(.85)}
+.grp-toggle{width:30px;height:30px;flex-shrink:0;border-radius:9px;display:grid;place-items:center;
+  transition:transform .25s cubic-bezier(.34,1.4,.5,1)}
+.grp-toggle svg{width:17px;height:17px;stroke:var(--muted);fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.grp-toggle.open{transform:rotate(180deg)}
+.grp-toggle:active{background:var(--surface-2)}
+.grp-body{margin:-3px 0 7px 12px;padding-left:10px;border-left:2px solid var(--line-2)}
+.card-sub{box-shadow:none;background:var(--surface-2);margin-bottom:6px}
+
+/* group day sheet */
+.bulk-btn{padding:13px 10px;border-radius:13px;background:var(--surface-2);color:var(--ink-soft);
+  font-weight:700;font-size:13.5px;flex:1;transition:transform .2s cubic-bezier(.34,1.5,.5,1)}
+.bulk-btn:active{transform:scale(.96)}
+.bulk-btn.main{width:100%;background:linear-gradient(150deg,var(--g1),var(--g2));color:#fff;
+  font-size:15px;padding:15px;margin-bottom:8px}
+.bulk-row{display:flex;gap:8px;margin-bottom:18px}
+.sit-row .sn .off{font-weight:600;font-size:11px;color:var(--faint);margin-left:6px}
+
+/* member picker */
+.pick-row{width:100%;display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:13px;
+  border:1.5px solid var(--line);background:var(--surface);margin-bottom:8px;text-align:left;
+  transition:transform .2s cubic-bezier(.34,1.5,.5,1),border-color .2s,background .2s}
+.pick-row:active{transform:scale(.98)}
+.pick-row.sel{border-color:var(--accent);background:var(--accent-soft)}
+.pick-row .ico-tile{width:28px;height:28px;border-radius:8px}
+.pick-row .ico-tile svg{width:16px;height:16px}
+.pr-name{flex:1;min-width:0;font-size:14px;font-weight:600;display:flex;flex-direction:column;gap:1px}
+.pr-name span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pr-name em{font-style:normal;font-size:11px;font-weight:600;color:var(--faint)}
+.pr-box{width:22px;height:22px;flex-shrink:0;border-radius:7px;border:1.5px solid var(--line-2);
+  display:grid;place-items:center}
+.pick-row.sel .pr-box{background:var(--accent);border-color:var(--accent)}
+.pr-box svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
 .ico-tile{width:29px;height:29px;border-radius:9px;background:var(--accent-soft);display:grid;place-items:center;flex-shrink:0}
 .ico-tile svg{width:17px;height:17px;stroke:var(--accent-ink);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .card-name{flex:1;min-width:0}
@@ -439,7 +482,7 @@ const EMOJI_MAP={'🌱':'sprout','💪':'dumbbell','📖':'book','🧘':'yoga','
 
 /* ---------- State ---------- */
 const KEY='cadence_v1';
-const DEFAULT={habits:[],entries:{},ideas:[],settings:{theme:'system',notif:false,notifTime:'20:00'},nextId:1};
+const DEFAULT={habits:[],entries:{},ideas:[],groups:[],settings:{theme:'system',notif:false,notifTime:'20:00'},nextId:1};
 let S=load();
 function load(){try{const raw=localStorage.getItem(KEY);if(raw)return Object.assign({},DEFAULT,JSON.parse(raw));}catch(e){}return JSON.parse(JSON.stringify(DEFAULT));}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
@@ -463,8 +506,20 @@ function migrate(){
     if(!h.situations||!h.situations.length)h.situations=[{id:uid(),name:'Standard'}];
   });
   if(!Array.isArray(S.ideas))S.ideas=[];
+  if(!Array.isArray(S.groups))S.groups=[];
+  const known=new Set(S.habits.map(h=>h.id));
+  S.groups.forEach(g=>{
+    if(!Array.isArray(g.habitIds))g.habitIds=[];
+    g.habitIds=g.habitIds.filter(id=>known.has(id));   // drop deleted habits
+    if(!g.icon)g.icon='leaf';
+    if(g.collapsed==null)g.collapsed=true;
+  });
   save();
 }
+/* a habit belongs to at most one group */
+function groupOf(hid){return S.groups.find(g=>g.habitIds.includes(hid))||null;}
+function ungroupedHabits(){return S.habits.filter(h=>!groupOf(h.id));}
+function groupHabits(g){return g.habitIds.map(id=>S.habits.find(h=>h.id===id)).filter(Boolean);}
 migrate();
 
 /* ---------- Date helpers ---------- */
@@ -508,7 +563,11 @@ function dayFull(h,date){
 }
 function isSchedDay(h,d){
   if(h.schedule==='weekdays')return h.weekdays.includes(wd(d));
-  if(h.schedule==='everyN'){const diff=Math.round((d-parse(h.startDate))/86400000);
+  if(h.schedule==='everyN'){
+    // normalise to midnight: `d` may carry a time-of-day, which would otherwise
+    // round the day difference up after noon and flip the rhythm mid-day
+    const a=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+    const diff=Math.round((a-parse(h.startDate))/86400000);
     return (((diff%h.interval)+h.interval)%h.interval)===0;}
   return true; // daily, weekly, monthly: any day can be used
 }
@@ -655,38 +714,200 @@ function renderTrack(){
     <button class="nbtn" onclick="weekOffset++;renderTrack()"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
   </div>`;
 
-  S.habits.forEach(h=>{
-    const c=chipData(h);
-    const gp=goalProgress(h);
-    let days='';
-    for(let i=0;i<7;i++){
-      const d=addDays(mon,i);const date=ds(d);
-      const isToday=date===tStr;const isFuture=d>now&&!isToday;
-      const offsched=!isSchedDay(h,d);
-      let segs='';
-      h.situations.forEach(s=>{const v=getE(h.id,s.id,date);segs+=`<div class="seg ${v||''}"></div>`;});
-      const done=dayFull(h,date)!==undefined;
-      days+=`<div class="day"><div class="dl">${DAYS_SHORT[i]}</div>
-        <button class="cell ${isToday?'today':''} ${isFuture?'future':''} ${offsched?'offsched':''} ${done?'done':''}"
-          ${isFuture?'disabled':''} onclick="openDay('${h.id}','${date}')">${segs}<div class="dot"></div></button>
-        <div class="dn">${d.getDate()}</div></div>`;
-    }
-    html+=`<div class="card">
-      <div class="card-top">
-        <button class="card-open" onclick="openHabitEditor('${h.id}')" aria-label="${esc(h.name)} bearbeiten">
-          <div class="ico-tile">${svgIcon(h.icon)}</div>
-          <div class="card-name"><h3>${esc(h.name)}</h3><div class="goal">${goalText(h)}</div></div>
-          <svg class="card-chev" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
-        </button>
-        <div class="chip-streak ${c.on?'on':''}"><svg viewBox="0 0 24 24">${CHIPICON[c.icon]}</svg>${c.txt}</div>
-      </div>
-      <div class="week">${days}</div>
-      ${gp?`<div class="goalbar"><div class="gb-track"><i style="width:${Math.min(100,gp.total?gp.cur/gp.total*100:0)}%"></i></div>
-        <div class="gb-cap">Ziel · ${Math.min(gp.cur,gp.total)}/${gp.total} ${gp.unit}${gp.cur>=gp.total?' · erreicht 🎉':''}</div></div>`:''}
-    </div>`;
-  });
-  html+=`<button class="add-btn" onclick="openHabitEditor()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Neue Gewohnheit</button>`;
+  S.groups.forEach(g=>{html+=groupCardHTML(g,mon,tStr,now);});
+  ungroupedHabits().forEach(h=>{html+=habitCardHTML(h,mon,tStr,now,false);});
+
+  html+=`<button class="add-btn" onclick="openHabitEditor()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Neue Gewohnheit</button>
+    <button class="add-btn" style="margin-top:8px" onclick="openGroupEditor()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Neue Gruppe</button>`;
   el.innerHTML=html;
+}
+
+/* one habit card; `sub` renders it as a group member (indented, with rail) */
+function habitCardHTML(h,mon,tStr,now,sub){
+  const c=chipData(h);const gp=goalProgress(h);
+  let days='';
+  for(let i=0;i<7;i++){
+    const d=addDays(mon,i);const date=ds(d);
+    const isToday=date===tStr;const isFuture=d>now&&!isToday;
+    const offsched=!isSchedDay(h,d);
+    let segs='';
+    h.situations.forEach(s=>{const v=getE(h.id,s.id,date);segs+=`<div class="seg ${v||''}"></div>`;});
+    const done=dayFull(h,date)!==undefined;
+    days+=`<div class="day"><div class="dl">${DAYS_SHORT[i]}</div>
+      <button class="cell ${isToday?'today':''} ${isFuture?'future':''} ${offsched?'offsched':''} ${done?'done':''}"
+        ${isFuture?'disabled':''} onclick="openDay('${h.id}','${date}')">${segs}<div class="dot"></div></button>
+      <div class="dn">${d.getDate()}</div></div>`;
+  }
+  return `<div class="card ${sub?'card-sub':''}">
+    <div class="card-top">
+      <button class="card-open" onclick="openHabitEditor('${h.id}')" aria-label="${esc(h.name)} bearbeiten">
+        <div class="ico-tile">${svgIcon(h.icon)}</div>
+        <div class="card-name"><h3>${esc(h.name)}</h3><div class="goal">${goalText(h)}</div></div>
+        <svg class="card-chev" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+      <div class="chip-streak ${c.on?'on':''}"><svg viewBox="0 0 24 24">${CHIPICON[c.icon]}</svg>${c.txt}</div>
+    </div>
+    <div class="week">${days}</div>
+    ${gp?`<div class="goalbar"><div class="gb-track"><i style="width:${Math.min(100,gp.total?gp.cur/gp.total*100:0)}%"></i></div>
+      <div class="gb-cap">Ziel · ${Math.min(gp.cur,gp.total)}/${gp.total} ${gp.unit}${gp.cur>=gp.total?' · erreicht 🎉':''}</div></div>`:''}
+  </div>`;
+}
+
+/* ---------- Groups ---------- */
+// how many members are due on `date`, and how many of those are settled (green or excused)
+function groupDayCounts(g,date){
+  let due=0,done=0;
+  groupHabits(g).forEach(h=>{
+    if(!isSchedDay(h,parse(date)))return;
+    due++;const st=dayFull(h,date);if(st==='g'||st==='o')done++;
+  });
+  return {due,done};
+}
+function groupCardHTML(g,mon,tStr,now){
+  const hs=groupHabits(g);
+  const {due,done}=groupDayCounts(g,tStr);
+  const complete=due>0&&done>=due;
+  let days='';
+  for(let i=0;i<7;i++){
+    const d=addDays(mon,i);const date=ds(d);
+    const isToday=date===tStr;const isFuture=d>now&&!isToday;
+    let segs='';
+    hs.forEach(h=>{
+      const st=isSchedDay(h,d)?dayFull(h,date):undefined;
+      segs+=`<div class="seg ${st==='g'||st==='o'||st==='r'?st:''}"></div>`;
+    });
+    if(!hs.length)segs='<div class="seg"></div>';
+    const c=groupDayCounts(g,date);
+    days+=`<div class="day"><div class="dl">${DAYS_SHORT[i]}</div>
+      <button class="cell ${isToday?'today':''} ${isFuture?'future':''} ${c.done?'done':''}"
+        ${isFuture?'disabled':''} onclick="openGroupDay('${g.id}','${date}')">${segs}<div class="dot"></div></button>
+      <div class="dn">${d.getDate()}</div></div>`;
+  }
+  const members=hs.length?hs.map(h=>esc(h.name)).join(' · '):'Noch keine Gewohnheiten drin';
+  return `<div class="card group-card">
+    <div class="card-top">
+      <button class="card-open" onclick="openGroupEditor('${g.id}')" aria-label="${esc(g.name)} bearbeiten">
+        <div class="ico-tile">${svgIcon(g.icon)}</div>
+        <div class="card-name"><h3>${esc(g.name)}</h3><div class="goal">${hs.length} Gewohnheiten</div></div>
+        <svg class="card-chev" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+      ${due?`<button class="grp-check ${complete?'on':''}" onclick="quickCheckGroup('${g.id}')"
+        aria-label="Gruppe für heute abhaken"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></button>`:''}
+      <div class="chip-streak ${complete?'on':''}">${done}/${due}</div>
+      <button class="grp-toggle ${g.collapsed?'':'open'}" onclick="toggleGroup('${g.id}')"
+        aria-label="${g.collapsed?'Gruppe aufklappen':'Gruppe zuklappen'}"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+    </div>
+    <div class="grp-members">${members}</div>
+    <div class="week">${days}</div>
+  </div>
+  ${g.collapsed?'':`<div class="grp-body">${hs.map(h=>habitCardHTML(h,mon,tStr,now,true)).join('')}</div>`}`;
+}
+function toggleGroup(gid){const g=S.groups.find(x=>x.id===gid);if(!g)return;
+  g.collapsed=!g.collapsed;save();renderTrack();}
+// One tap: mark every member that is due today as done. Tapping again undoes
+// exactly the entries this tap created, leaving anything pre-existing alone.
+function quickCheckGroup(gid){
+  const g=S.groups.find(x=>x.id===gid);if(!g)return;
+  const date=todayStr();const touched=[];
+  if(g.lastQuick&&g.lastQuick.date===date&&g.lastQuick.entries.length){
+    g.lastQuick.entries.forEach(e=>setE(e.hid,e.sid,date,undefined));
+    g.lastQuick=null;save();renderTrack();toast('Zurückgenommen');return;
+  }
+  groupHabits(g).forEach(h=>{
+    if(!isSchedDay(h,today()))return;
+    h.situations.forEach(s=>{
+      if(getE(h.id,s.id,date)===undefined){setE(h.id,s.id,date,'g');touched.push({hid:h.id,sid:s.id});}
+    });
+  });
+  g.lastQuick={date,entries:touched};save();renderTrack();
+  groupHabits(g).forEach(maybeCelebrate);
+  toast(touched.length?'Gruppe erledigt 🌱':'War schon erledigt');
+}
+let curGroupDay=null;
+function openGroupDay(gid,date){
+  const g=S.groups.find(x=>x.id===gid);if(!g)return;
+  if(parse(date)>today()&&date!==todayStr())return;
+  curGroupDay={gid,date};
+  document.getElementById('sheetTitle').textContent=g.name;
+  let body=`<div class="de-date">${fmtLong(parse(date))}</div>
+    <button class="bulk-btn main" onclick="bulkSet('${gid}','${date}','g')">Alles erledigt</button>
+    <div class="bulk-row">
+      <button class="bulk-btn" onclick="bulkSet('${gid}','${date}','o')">Alles entschuldigt</button>
+      <button class="bulk-btn" onclick="bulkSet('${gid}','${date}',null)">Zurücksetzen</button>
+    </div>`;
+  const hs=groupHabits(g);
+  if(!hs.length)body+=`<div class="hint" style="margin-top:14px">Diese Gruppe enthält noch keine Gewohnheiten.</div>`;
+  hs.forEach(h=>{
+    const off=!isSchedDay(h,parse(date));
+    h.situations.forEach(s=>{
+      const v=getE(h.id,s.id,date);
+      const label=h.situations.length>1?`${esc(h.name)} · ${esc(s.name)}`:esc(h.name);
+      body+=`<div class="sit-row"><div class="sn">${label}${off?' <span class="off">nicht fällig</span>':''}</div>
+        <div class="choices">${cBtn('r','Nicht',v,h.id,s.id,date)}${cBtn('o','Okay',v,h.id,s.id,date)}${cBtn('g','Erledigt',v,h.id,s.id,date)}</div></div>`;
+    });
+  });
+  document.getElementById('sheetBody').innerHTML=body;showSheet();
+}
+function bulkSet(gid,date,val){
+  const g=S.groups.find(x=>x.id===gid);if(!g)return;
+  groupHabits(g).forEach(h=>{
+    if(val!==null&&!isSchedDay(h,parse(date)))return;   // skip members not due that day
+    h.situations.forEach(s=>setE(h.id,s.id,date,val||undefined));
+  });
+  if(val==='g')g.lastQuick=null;                        // manual bulk supersedes the quick-tap undo
+  save();renderTrack();openGroupDay(gid,date);
+  groupHabits(g).forEach(maybeCelebrate);
+  toast(val==='g'?'Alles erledigt':val==='o'?'Alles entschuldigt':'Zurückgesetzt');
+}
+
+/* ---------- Group editor ---------- */
+let gDraft=null;
+function openGroupEditor(gid){
+  const g=gid?S.groups.find(x=>x.id===gid):null;
+  gDraft=g?JSON.parse(JSON.stringify(g)):{id:null,name:'',icon:'sun',habitIds:[],collapsed:true};
+  document.getElementById('sheetTitle').textContent=g?'Gruppe bearbeiten':'Neue Gruppe';
+  renderGroupEditor();showSheet();
+}
+function renderGroupEditor(){
+  const d=gDraft;
+  const icons=ICON_KEYS.map(k=>`<button class="${d.icon===k?'sel':''}" onclick="gDraft.icon='${k}';renderGroupEditor()">${svgIcon(k)}</button>`).join('');
+  const list=S.habits.length?S.habits.map(h=>{
+    const on=d.habitIds.includes(h.id);
+    const other=S.groups.find(x=>x.id!==d.id&&x.habitIds.includes(h.id));
+    return `<button class="pick-row ${on?'sel':''}" onclick="toggleMember('${h.id}')">
+      <div class="ico-tile">${svgIcon(h.icon)}</div>
+      <div class="pr-name"><span>${esc(h.name)}</span>${other&&!on?`<em>in „${esc(other.name)}"</em>`:''}</div>
+      <div class="pr-box">${on?'<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>':''}</div>
+    </button>`;}).join(''):`<div class="hint">Du hast noch keine Gewohnheiten.</div>`;
+  document.getElementById('sheetBody').innerHTML=`
+    <div class="field"><label>Name</label>
+      <input class="inp" value="${esc(d.name)}" placeholder="z. B. Morgenroutine" oninput="gDraft.name=this.value"></div>
+    <div class="field"><label>Symbol</label><div class="icon-pick">${icons}</div></div>
+    <div class="field"><label>Gewohnheiten in der Gruppe</label>
+      <div class="hint" style="margin:-2px 0 10px">Eine Gewohnheit kann nur in einer Gruppe sein – beim Anhaken wechselt sie hierher.</div>
+      ${list}</div>
+    <button class="primary" onclick="saveGroup()">${d.id?'Speichern':'Gruppe anlegen'}</button>
+    ${d.id?`<button class="danger-btn" onclick="deleteGroup()">Gruppe auflösen</button>`:''}`;
+}
+function toggleMember(hid){
+  const a=gDraft.habitIds;const i=a.indexOf(hid);
+  if(i>=0)a.splice(i,1);else a.push(hid);
+  renderGroupEditor();
+}
+function saveGroup(){
+  const d=gDraft;
+  if(!d.name.trim()){toast('Bitte einen Namen eingeben');return;}
+  const isNew=!d.id;
+  // a habit lives in exactly one group – take it out of any other
+  S.groups.forEach(g=>{if(g.id!==d.id)g.habitIds=g.habitIds.filter(id=>!d.habitIds.includes(id));});
+  if(isNew){d.id=uid();S.groups.push(d);}
+  else{const i=S.groups.findIndex(x=>x.id===d.id);S.groups[i]=d;}
+  save();hideSheet();renderTrack();toast(isNew?'Gruppe angelegt':'Gespeichert');
+}
+function deleteGroup(){
+  if(!confirm('Gruppe auflösen? Die Gewohnheiten bleiben erhalten und erscheinen wieder einzeln.'))return;
+  S.groups=S.groups.filter(x=>x.id!==gDraft.id);
+  save();hideSheet();renderTrack();toast('Gruppe aufgelöst');
 }
 
 /* ---------- Day editor ---------- */
@@ -828,6 +1049,7 @@ function saveHabit(){
 }
 function deleteHabit(){if(!confirm('Diese Gewohnheit und alle Einträge löschen?'))return;
   S.habits=S.habits.filter(x=>x.id!==draft.id);delete S.entries[draft.id];
+  S.groups.forEach(g=>{g.habitIds=g.habitIds.filter(id=>id!==draft.id);});
   save();hideSheet();renderTrack();scheduleNotifs();toast('Gelöscht');}
 
 /* ---------- IDEAS ---------- */
