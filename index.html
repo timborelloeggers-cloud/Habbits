@@ -3,21 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Cadence</title>
-<meta name="description" content="Cadence – ruhiger Habit-Tracker">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Cadence">
-<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f3f1ec">
-<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121210">
+<meta name="description" content="Cadence – ruhiger Habit-Tracker">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#e8ebf1">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d1016">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
+<title>Cadence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap">
-
 <style>
 :root{
   --bg:#f3f1ec; --surface:#ffffff; --surface-2:#eceae4; --surface-3:#e3e0d8;
@@ -193,6 +192,34 @@ svg{display:block}
 .gb-track i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--g2),var(--accent));
   transition:width .5s cubic-bezier(.32,.72,0,1)}
 .gb-cap{font-size:9.5px;font-weight:700;color:var(--faint);letter-spacing:.03em}
+
+/* ---- Matrix: gemeinsames Raster fuer alle Gewohnheiten ---- */
+.matrix{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:10px 10px 6px;box-shadow:var(--shadow);margin-bottom:9px}
+.mgrid{display:grid;grid-template-columns:16px 90px repeat(7,minmax(0,1fr)) 28px;align-items:center;gap:3px}
+.mhead{padding-bottom:7px;border-bottom:1px solid var(--line);margin-bottom:1px}
+.mhead .dl{text-align:center;font-size:9px;font-weight:700;color:var(--faint);letter-spacing:.02em;text-transform:uppercase}
+.mrow{padding:6px 0;border-top:1px solid var(--line)}
+.mrow:first-of-type{border-top:none}
+.mchev{width:16px;height:16px;stroke:var(--faint);fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;
+  transition:transform .25s cubic-bezier(.34,1.4,.5,1)}
+.mchev.open{transform:rotate(180deg)}
+.mname{display:flex;align-items:center;gap:6px;min-width:0;text-align:left}
+.mname .ico-tile{width:22px;height:22px;border-radius:7px;flex-shrink:0}
+.mname .ico-tile svg{width:12px;height:12px}
+.mname span{font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mrow.sub .mname{padding-left:11px}
+.mrow.sub .mname span{font-weight:600;color:var(--ink-soft);font-size:11px}
+.mcell{aspect-ratio:1;border-radius:6px;background:var(--surface-2);position:relative;overflow:hidden;display:flex;flex-direction:column}
+.mcell.future{opacity:.4}
+.mcell.offsched{background:repeating-linear-gradient(45deg,var(--surface-2),var(--surface-2) 2px,transparent 2px,transparent 4px);opacity:.55}
+.mcell.today{outline:1.5px solid var(--accent);outline-offset:1px}
+.mseg{flex:1}
+.mseg+.mseg{border-top:1px solid rgba(255,255,255,.32)}
+.mseg.g{background:linear-gradient(150deg,var(--g1),var(--g2))}
+.mseg.o{background:linear-gradient(150deg,var(--o1),var(--o2))}
+.mseg.r{background:linear-gradient(150deg,var(--r1),var(--r2))}
+.mstreak{font-size:10px;font-weight:700;color:var(--ink-soft);text-align:right;font-variant-numeric:tabular-nums}
 
 .add-btn{width:100%;padding:14px;border-radius:var(--radius);border:1.5px dashed var(--line-2);color:var(--muted);
   font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;background:transparent;transition:.2s}
@@ -714,42 +741,47 @@ function renderTrack(){
     <button class="nbtn" onclick="weekOffset++;renderTrack()"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
   </div>`;
 
-  S.groups.forEach(g=>{html+=groupCardHTML(g,mon,tStr,now);});
-  ungroupedHabits().forEach(h=>{html+=habitCardHTML(h,mon,tStr,now,false);});
+  html+=matrixHTML(mon,tStr,now);
 
   html+=`<button class="add-btn" onclick="openHabitEditor()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Neue Gewohnheit</button>
     <button class="add-btn" style="margin-top:8px" onclick="openGroupEditor()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Neue Gruppe</button>`;
   el.innerHTML=html;
 }
 
-/* one habit card; `sub` renders it as a group member (indented, with rail) */
-function habitCardHTML(h,mon,tStr,now,sub){
-  const c=chipData(h);const gp=goalProgress(h);
-  let days='';
+/* ---------- Matrix: ein gemeinsames Raster statt einzelner Karten ---------- */
+function matrixHTML(mon,tStr,now){
+  const head=`<div class="mgrid mhead"><div></div><div></div>`+
+    DAYS_SHORT.map(d=>`<div class="dl">${d}</div>`).join('')+`<div></div></div>`;
+  let rows='';
+  S.groups.forEach(g=>{rows+=groupRowHTML(g,mon,tStr,now);});
+  ungroupedHabits().forEach(h=>{rows+=habitRowHTML(h,mon,tStr,now,false);});
+  return `<div class="matrix">${head}${rows}</div>`;
+}
+// compact streak text for the narrow matrix column (no "Tage"-Suffix)
+function matrixStreakText(h){
+  if(h.schedule==='weekly')return weekGreens(h)+'/'+h.weeklyTarget;
+  if(h.schedule==='monthly')return monthGreens(h,today())+'/'+h.monthlyTarget;
+  return String(streak(h));
+}
+/* one habit row; `sub` renders it as an indented group member */
+function habitRowHTML(h,mon,tStr,now,sub){
+  let cells='';
   for(let i=0;i<7;i++){
     const d=addDays(mon,i);const date=ds(d);
     const isToday=date===tStr;const isFuture=d>now&&!isToday;
     const offsched=!isSchedDay(h,d);
     let segs='';
-    h.situations.forEach(s=>{const v=getE(h.id,s.id,date);segs+=`<div class="seg ${v||''}"></div>`;});
-    const done=dayFull(h,date)!==undefined;
-    days+=`<div class="day"><div class="dl">${DAYS_SHORT[i]}</div>
-      <button class="cell ${isToday?'today':''} ${isFuture?'future':''} ${offsched?'offsched':''} ${done?'done':''}"
-        ${isFuture?'disabled':''} onclick="openDay('${h.id}','${date}')">${segs}<div class="dot"></div></button>
-      <div class="dn">${d.getDate()}</div></div>`;
+    h.situations.forEach(s=>{const v=getE(h.id,s.id,date);segs+=`<div class="mseg ${v||''}"></div>`;});
+    cells+=`<button class="mcell ${isToday?'today':''} ${isFuture?'future':''} ${offsched?'offsched':''}"
+      ${isFuture?'disabled':''} onclick="openDay('${h.id}','${date}')" aria-label="${esc(h.name)} ${d.getDate()}.">${segs}</button>`;
   }
-  return `<div class="card ${sub?'card-sub':''}">
-    <div class="card-top">
-      <button class="card-open" onclick="openHabitEditor('${h.id}')" aria-label="${esc(h.name)} bearbeiten">
-        <div class="ico-tile">${svgIcon(h.icon)}</div>
-        <div class="card-name"><h3>${esc(h.name)}</h3><div class="goal">${goalText(h)}</div></div>
-        <svg class="card-chev" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
-      </button>
-      <div class="chip-streak ${c.on?'on':''}"><svg viewBox="0 0 24 24">${CHIPICON[c.icon]}</svg>${c.txt}</div>
-    </div>
-    <div class="week">${days}</div>
-    ${gp?`<div class="goalbar"><div class="gb-track"><i style="width:${Math.min(100,gp.total?gp.cur/gp.total*100:0)}%"></i></div>
-      <div class="gb-cap">Ziel · ${Math.min(gp.cur,gp.total)}/${gp.total} ${gp.unit}${gp.cur>=gp.total?' · erreicht 🎉':''}</div></div>`:''}
+  return `<div class="mgrid mrow ${sub?'sub':''}">
+    <div></div>
+    <button class="mname" onclick="openHabitEditor('${h.id}')" aria-label="${esc(h.name)} bearbeiten">
+      <div class="ico-tile">${svgIcon(h.icon)}</div><span>${esc(h.name)}</span>
+    </button>
+    ${cells}
+    <div class="mstreak">${matrixStreakText(h)}</div>
   </div>`;
 }
 
@@ -763,44 +795,35 @@ function groupDayCounts(g,date){
   });
   return {due,done};
 }
-function groupCardHTML(g,mon,tStr,now){
+function groupRowHTML(g,mon,tStr,now){
   const hs=groupHabits(g);
-  const {due,done}=groupDayCounts(g,tStr);
-  const complete=due>0&&done>=due;
-  let days='';
+  let cells='';
   for(let i=0;i<7;i++){
     const d=addDays(mon,i);const date=ds(d);
     const isToday=date===tStr;const isFuture=d>now&&!isToday;
     let segs='';
     hs.forEach(h=>{
       const st=isSchedDay(h,d)?dayFull(h,date):undefined;
-      segs+=`<div class="seg ${st==='g'||st==='o'||st==='r'?st:''}"></div>`;
+      segs+=`<div class="mseg ${st==='g'||st==='o'||st==='r'?st:''}"></div>`;
     });
-    if(!hs.length)segs='<div class="seg"></div>';
-    const c=groupDayCounts(g,date);
-    days+=`<div class="day"><div class="dl">${DAYS_SHORT[i]}</div>
-      <button class="cell ${isToday?'today':''} ${isFuture?'future':''} ${c.done?'done':''}"
-        ${isFuture?'disabled':''} onclick="openGroupDay('${g.id}','${date}')">${segs}<div class="dot"></div></button>
-      <div class="dn">${d.getDate()}</div></div>`;
+    if(!hs.length)segs='<div class="mseg"></div>';
+    cells+=`<button class="mcell ${isToday?'today':''} ${isFuture?'future':''}"
+      ${isFuture?'disabled':''} onclick="openGroupDay('${g.id}','${date}')" aria-label="${esc(g.name)} ${d.getDate()}.">${segs}</button>`;
   }
-  const members=hs.length?hs.map(h=>esc(h.name)).join(' · '):'Noch keine Gewohnheiten drin';
-  return `<div class="card group-card">
-    <div class="card-top">
-      <button class="card-open" onclick="openGroupEditor('${g.id}')" aria-label="${esc(g.name)} bearbeiten">
-        <div class="ico-tile">${svgIcon(g.icon)}</div>
-        <div class="card-name"><h3>${esc(g.name)}</h3><div class="goal">${hs.length} Gewohnheiten</div></div>
-        <svg class="card-chev" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
-      </button>
-      ${due?`<button class="grp-check ${complete?'on':''}" onclick="quickCheckGroup('${g.id}')"
-        aria-label="Gruppe für heute abhaken"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></button>`:''}
-      <div class="chip-streak ${complete?'on':''}">${done}/${due}</div>
-      <button class="grp-toggle ${g.collapsed?'':'open'}" onclick="toggleGroup('${g.id}')"
-        aria-label="${g.collapsed?'Gruppe aufklappen':'Gruppe zuklappen'}"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
-    </div>
-    <div class="grp-members">${members}</div>
-    <div class="week">${days}</div>
-  </div>
-  ${g.collapsed?'':`<div class="grp-body">${hs.map(h=>habitCardHTML(h,mon,tStr,now,true)).join('')}</div>`}`;
+  const {due,done}=groupDayCounts(g,tStr);
+  let out=`<div class="mgrid mrow">
+    <button onclick="toggleGroup('${g.id}')" aria-label="${g.collapsed?'Gruppe aufklappen':'Gruppe zuklappen'}"
+      style="width:16px;height:16px;display:flex;align-items:center;justify-content:center">
+      <svg class="mchev ${g.collapsed?'':'open'}" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <button class="mname" onclick="openGroupEditor('${g.id}')" aria-label="${esc(g.name)} bearbeiten">
+      <div class="ico-tile">${svgIcon(g.icon)}</div><span>${esc(g.name)}</span>
+    </button>
+    ${cells}
+    <div class="mstreak">${due?done+'/'+due:'–'}</div>
+  </div>`;
+  if(!g.collapsed)hs.forEach(h=>{out+=habitRowHTML(h,mon,tStr,now,true);});
+  return out;
 }
 function toggleGroup(gid){const g=S.groups.find(x=>x.id===gid);if(!g)return;
   g.collapsed=!g.collapsed;save();renderTrack();}
