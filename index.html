@@ -227,7 +227,7 @@ svg{display:block}
   padding:2px 14px;box-shadow:var(--shadow);margin-bottom:9px}
 .trow{width:100%;display:flex;align-items:center;gap:11px;padding:12px 0;border-top:1px solid var(--line);
   text-align:left;transition:transform .2s cubic-bezier(.34,1.5,.5,1)}
-.trow:first-child{border-top:none}
+.tlist>.trow:first-child,.tlist>.trow-grp:first-child>.trow:first-child{border-top:none}
 .trow:active{transform:scale(.99)}
 .trow .ico-tile{width:32px;height:32px;flex-shrink:0}
 .tname{flex:1;min-width:0}
@@ -238,6 +238,12 @@ svg{display:block}
 .tstatus.o{background:linear-gradient(150deg,var(--o1),var(--o2))}
 .tstatus.r{background:linear-gradient(150deg,var(--r1),var(--r2))}
 .tempty{text-align:center;padding:34px 10px;color:var(--muted);font-size:13.5px;font-weight:500}
+/* Gruppenzeile in der Heute-Liste: Chevron zum Auf-/Zuklappen + eigener Bereich zum Oeffnen des Tagesblatts */
+.tchev{width:16px;height:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.trow-open{flex:1;min-width:0;display:flex;align-items:center;gap:11px;text-align:left}
+.trow.sub{padding-left:25px}
+.trow.sub .ico-tile{width:27px;height:27px}
+.tlist button:disabled{opacity:.4}
 
 .add-btn{width:100%;padding:14px;border-radius:var(--radius);border:1.5px dashed var(--line-2);color:var(--muted);
   font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;background:transparent;transition:.2s}
@@ -616,12 +622,14 @@ function isSchedDay(h,d){
     return (((diff%h.interval)+h.interval)%h.interval)===0;}
   return true; // daily, weekly, monthly: any day can be used
 }
-function dueToday(h){
+// wie dueToday(), nur fuer ein beliebiges Datum (Tages-Checkliste mit Navigation)
+function dueOnDate(h,d){
   if(h.schedule==='daily')return true;
-  if(h.schedule==='weekdays')return h.weekdays.includes(wd(today()));
-  if(h.schedule==='everyN')return isSchedDay(h,today());
+  if(h.schedule==='weekdays')return h.weekdays.includes(wd(d));
+  if(h.schedule==='everyN')return isSchedDay(h,d);
   return false; // weekly/monthly are flexible, not a fixed daily duty
 }
+function dueToday(h){return dueOnDate(h,today());}
 
 /* ---------- Streak / progress ---------- */
 // Streak = consecutive fulfilled scheduled days (orange excused/skipped,
@@ -700,6 +708,7 @@ const V={track:document.getElementById('view-track'),stats:document.getElementBy
   ideas:document.getElementById('view-ideas'),settings:document.getElementById('view-settings')};
 let weekOffset=0;
 let trackView='week';   // 'week' = Matrix, 'today' = Tages-Checkliste
+let dayOffset=0;        // Tagesversatz fuer die Heute-Ansicht, wie weekOffset fuer die Woche
 function setTrackView(v){if(trackView===v)return;trackView=v;renderTrack();}
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
@@ -753,7 +762,19 @@ function renderTrack(){
   </div>`;
 
   if(trackView==='today'){
-    html+=todayListHTML(tStr);
+    const viewDate=addDays(today(),dayOffset);const viewDateStr=ds(viewDate);
+    let dlabel;
+    if(dayOffset===0)dlabel='Heute';
+    else if(dayOffset===-1)dlabel='Gestern';
+    else if(dayOffset===1)dlabel='Morgen';
+    else dlabel=fmtLong(viewDate);
+    html+=`<div class="wknav">
+      <button class="nbtn" onclick="dayOffset--;renderTrack()"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="lbl">${dlabel}</div>
+      ${dayOffset!==0?`<button class="jump" onclick="dayOffset=0;renderTrack()">Heute</button>`:''}
+      <button class="nbtn" onclick="dayOffset++;renderTrack()"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+    </div>`;
+    html+=todayListHTML(viewDateStr,viewDate,now);
   }else{
     // week label
     const wEnd=addDays(mon,6);
@@ -779,31 +800,55 @@ function renderTrack(){
 /* Tages-Checkliste: nur heute faellige (oder schon angetippte) Gewohnheiten,
    ein Statusfeld pro Zeile. Tippen oeffnet dasselbe Auswahl-Blatt wie in der
    Matrix - keine neue Interaktion, nur eine fokussierte, groessere Ansicht. */
-function todayListHTML(tStr){
+function todayListHTML(dStr,viewDate,now){
+  const isFuture=viewDate>now&&dStr!==todayStr();
+  const dis=isFuture?'disabled':'';
   let rows='';
   S.groups.forEach(g=>{
-    const {due,done}=groupDayCounts(g,tStr);
+    const {due,done}=groupDayCounts(g,dStr);
     if(!due)return;
-    rows+=`<button class="trow" onclick="openGroupDay('${g.id}','${tStr}')">
-      <div class="ico-tile">${svgIcon(g.icon)}</div>
-      <div class="tname"><div class="n">${esc(g.name)}</div><div class="sit">${done}/${due} erledigt</div></div>
-      <div class="tstatus ${done>=due?'g':''}"></div>
-    </button>`;
+    rows+=`<div class="trow-grp"><div class="trow">
+      <button class="tchev" ${dis} onclick="toggleGroup('${g.id}')"
+        aria-label="${g.collapsed?'Gruppe aufklappen':'Gruppe zuklappen'}">
+        <svg class="mchev ${g.collapsed?'':'open'}" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <button class="trow-open" ${dis} onclick="openGroupDay('${g.id}','${dStr}')">
+        <div class="ico-tile">${svgIcon(g.icon)}</div>
+        <div class="tname"><div class="n">${esc(g.name)}</div><div class="sit">${done}/${due} erledigt</div></div>
+        <div class="tstatus ${done>=due?'g':''}"></div>
+      </button>
+    </div>`;
+    if(!g.collapsed){
+      groupHabits(g).forEach(h=>{
+        const due2=dueOnDate(h,viewDate);
+        const anySet2=h.situations.some(s=>getE(h.id,s.id,dStr)!==undefined);
+        if(!due2&&!anySet2)return;
+        h.situations.forEach(s=>{
+          const v=getE(h.id,s.id,dStr);
+          rows+=`<button class="trow sub" ${dis} onclick="openDay('${h.id}','${dStr}')">
+            <div class="ico-tile">${svgIcon(h.icon)}</div>
+            <div class="tname"><div class="n">${esc(h.name)}</div>${h.situations.length>1?`<div class="sit">${esc(s.name)}</div>`:''}</div>
+            <div class="tstatus ${v||''}"></div>
+          </button>`;
+        });
+      });
+    }
+    rows+=`</div>`;
   });
   ungroupedHabits().forEach(h=>{
-    const due=dueToday(h);
-    const anySet=h.situations.some(s=>getE(h.id,s.id,tStr)!==undefined);
-    if(!due&&!anySet)return;   // flexible Ziel (Woche/Monat), heute noch nicht angefasst
+    const due=dueOnDate(h,viewDate);
+    const anySet=h.situations.some(s=>getE(h.id,s.id,dStr)!==undefined);
+    if(!due&&!anySet)return;   // flexible Ziel (Woche/Monat), an dem Tag noch nicht angefasst
     h.situations.forEach(s=>{
-      const v=getE(h.id,s.id,tStr);
-      rows+=`<button class="trow" onclick="openDay('${h.id}','${tStr}')">
+      const v=getE(h.id,s.id,dStr);
+      rows+=`<button class="trow" ${dis} onclick="openDay('${h.id}','${dStr}')">
         <div class="ico-tile">${svgIcon(h.icon)}</div>
         <div class="tname"><div class="n">${esc(h.name)}</div>${h.situations.length>1?`<div class="sit">${esc(s.name)}</div>`:''}</div>
         <div class="tstatus ${v||''}"></div>
       </button>`;
     });
   });
-  if(!rows)return `<div class="tlist"><div class="tempty">Für heute ist nichts geplant. Genieß den Tag.</div></div>`;
+  if(!rows)return `<div class="tlist"><div class="tempty">Für diesen Tag ist nichts geplant.</div></div>`;
   return `<div class="tlist">${rows}</div>`;
 }
 
@@ -909,7 +954,7 @@ let curGroupDay=null;
 function openGroupDay(gid,date){
   const g=S.groups.find(x=>x.id===gid);if(!g)return;
   if(parse(date)>today()&&date!==todayStr())return;
-  curGroupDay={gid,date};
+  curGroupDay={gid,date};curDay=null;
   document.getElementById('sheetTitle').textContent=g.name;
   let body=`<div class="de-date">${fmtLong(parse(date))}</div>
     <button class="bulk-btn main" onclick="bulkSet('${gid}','${date}','g')">Alles erledigt</button>
@@ -997,7 +1042,7 @@ let curDay=null;
 function openDay(hid,date){
   const h=S.habits.find(x=>x.id===hid);if(!h)return;
   if(parse(date)>today()&&date!==todayStr())return;
-  curDay={hid,date};
+  curDay={hid,date};curGroupDay=null;
   document.getElementById('sheetTitle').textContent=h.name;
   const d=parse(date);
   let body=`<div class="de-date">${fmtLong(d)}</div>`;
@@ -1024,6 +1069,23 @@ function pick(hid,sid,date,val,btn){
   renderTrack();
   const av=document.querySelector('.nav-item.active').dataset.view;if(av==='stats')renderStats();
   maybeCelebrate(h);
+  // Ist fuer diesen Tag alles entschieden, schliesst sich das Blatt von selbst.
+  // Kurz verzoegert, damit die getroffene Auswahl noch sichtbar aufleuchtet.
+  if(dayFullyDecided(date))setTimeout(hideSheet,280);
+}
+// Alle faelligen Situationen des offenen Tagesblatts entschieden?
+// Gilt fuer das Einzel-Blatt (curDay) wie fuer das Gruppen-Blatt (curGroupDay).
+function dayFullyDecided(date){
+  let hs;
+  if(curGroupDay&&curGroupDay.date===date){
+    const g=S.groups.find(x=>x.id===curGroupDay.gid);if(!g)return false;
+    hs=groupHabits(g).filter(x=>isSchedDay(x,parse(date)));
+  }else if(curDay&&curDay.date===date){
+    const h=S.habits.find(x=>x.id===curDay.hid);if(!h)return false;
+    hs=[h];
+  }else return false;
+  if(!hs.length)return false;
+  return hs.every(x=>x.situations.every(s=>getE(x.id,s.id,date)!==undefined));
 }
 function clearDay(){const h=S.habits.find(x=>x.id===curDay.hid);
   h.situations.forEach(s=>setE(curDay.hid,s.id,curDay.date,undefined));
