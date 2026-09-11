@@ -221,6 +221,24 @@ svg{display:block}
 .mseg.r{background:linear-gradient(150deg,var(--r1),var(--r2))}
 .mstreak{font-size:10px;font-weight:700;color:var(--ink-soft);text-align:right;font-variant-numeric:tabular-nums}
 
+/* ---- Umschalter Woche/Heute + Tages-Checkliste ---- */
+.view-toggle{margin-bottom:9px}
+.tlist{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:2px 14px;box-shadow:var(--shadow);margin-bottom:9px}
+.trow{width:100%;display:flex;align-items:center;gap:11px;padding:12px 0;border-top:1px solid var(--line);
+  text-align:left;transition:transform .2s cubic-bezier(.34,1.5,.5,1)}
+.trow:first-child{border-top:none}
+.trow:active{transform:scale(.99)}
+.trow .ico-tile{width:32px;height:32px;flex-shrink:0}
+.tname{flex:1;min-width:0}
+.tname .n{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tname .sit{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tstatus{width:38px;height:38px;border-radius:11px;background:var(--surface-2);flex-shrink:0}
+.tstatus.g{background:linear-gradient(150deg,var(--g1),var(--g2))}
+.tstatus.o{background:linear-gradient(150deg,var(--o1),var(--o2))}
+.tstatus.r{background:linear-gradient(150deg,var(--r1),var(--r2))}
+.tempty{text-align:center;padding:34px 10px;color:var(--muted);font-size:13.5px;font-weight:500}
+
 .add-btn{width:100%;padding:14px;border-radius:var(--radius);border:1.5px dashed var(--line-2);color:var(--muted);
   font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;background:transparent;transition:.2s}
 .add-btn:active{background:var(--surface-2)}
@@ -681,6 +699,8 @@ function celebrate(text){
 const V={track:document.getElementById('view-track'),stats:document.getElementById('view-stats'),
   ideas:document.getElementById('view-ideas'),settings:document.getElementById('view-settings')};
 let weekOffset=0;
+let trackView='week';   // 'week' = Matrix, 'today' = Tages-Checkliste
+function setTrackView(v){if(trackView===v)return;trackView=v;renderTrack();}
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
 function dayBlend(g,o,r){
@@ -725,27 +745,66 @@ function renderTrack(){
   }
   const mon=addDays(mondayOf(today()),weekOffset*7);
   const tStr=todayStr();const now=today();
-  // week label
-  const wEnd=addDays(mon,6);
-  let label;
-  if(weekOffset===0)label='Diese Woche';
-  else if(weekOffset===-1)label='Letzte Woche';
-  else if(weekOffset===1)label='Nächste Woche';
-  else label=mon.getDate()+'.–'+wEnd.getDate()+'. '+MONTHS[wEnd.getMonth()].slice(0,3);
 
   let html=todayCardHTML();
-  html+=`<div class="wknav">
-    <button class="nbtn" onclick="weekOffset--;renderTrack()"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
-    <div class="lbl">${label}</div>
-    ${weekOffset!==0?`<button class="jump" onclick="weekOffset=0;renderTrack()">Heute</button>`:''}
-    <button class="nbtn" onclick="weekOffset++;renderTrack()"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+  html+=`<div class="seg-toggle view-toggle">
+    <button class="${trackView==='today'?'sel':''}" onclick="setTrackView('today')">Heute</button>
+    <button class="${trackView==='week'?'sel':''}" onclick="setTrackView('week')">Woche</button>
   </div>`;
 
-  html+=matrixHTML(mon,tStr,now);
+  if(trackView==='today'){
+    html+=todayListHTML(tStr);
+  }else{
+    // week label
+    const wEnd=addDays(mon,6);
+    let label;
+    if(weekOffset===0)label='Diese Woche';
+    else if(weekOffset===-1)label='Letzte Woche';
+    else if(weekOffset===1)label='Nächste Woche';
+    else label=mon.getDate()+'.–'+wEnd.getDate()+'. '+MONTHS[wEnd.getMonth()].slice(0,3);
+
+    html+=`<div class="wknav">
+      <button class="nbtn" onclick="weekOffset--;renderTrack()"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="lbl">${label}</div>
+      ${weekOffset!==0?`<button class="jump" onclick="weekOffset=0;renderTrack()">Heute</button>`:''}
+      <button class="nbtn" onclick="weekOffset++;renderTrack()"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+    </div>`;
+    html+=matrixHTML(mon,tStr,now);
+  }
 
   html+=`<button class="add-btn" onclick="openHabitEditor()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Neue Gewohnheit</button>
     <button class="add-btn" style="margin-top:8px" onclick="openGroupEditor()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Neue Gruppe</button>`;
   el.innerHTML=html;
+}
+/* Tages-Checkliste: nur heute faellige (oder schon angetippte) Gewohnheiten,
+   ein Statusfeld pro Zeile. Tippen oeffnet dasselbe Auswahl-Blatt wie in der
+   Matrix - keine neue Interaktion, nur eine fokussierte, groessere Ansicht. */
+function todayListHTML(tStr){
+  let rows='';
+  S.groups.forEach(g=>{
+    const {due,done}=groupDayCounts(g,tStr);
+    if(!due)return;
+    rows+=`<button class="trow" onclick="openGroupDay('${g.id}','${tStr}')">
+      <div class="ico-tile">${svgIcon(g.icon)}</div>
+      <div class="tname"><div class="n">${esc(g.name)}</div><div class="sit">${done}/${due} erledigt</div></div>
+      <div class="tstatus ${done>=due?'g':''}"></div>
+    </button>`;
+  });
+  ungroupedHabits().forEach(h=>{
+    const due=dueToday(h);
+    const anySet=h.situations.some(s=>getE(h.id,s.id,tStr)!==undefined);
+    if(!due&&!anySet)return;   // flexible Ziel (Woche/Monat), heute noch nicht angefasst
+    h.situations.forEach(s=>{
+      const v=getE(h.id,s.id,tStr);
+      rows+=`<button class="trow" onclick="openDay('${h.id}','${tStr}')">
+        <div class="ico-tile">${svgIcon(h.icon)}</div>
+        <div class="tname"><div class="n">${esc(h.name)}</div>${h.situations.length>1?`<div class="sit">${esc(s.name)}</div>`:''}</div>
+        <div class="tstatus ${v||''}"></div>
+      </button>`;
+    });
+  });
+  if(!rows)return `<div class="tlist"><div class="tempty">Für heute ist nichts geplant. Genieß den Tag.</div></div>`;
+  return `<div class="tlist">${rows}</div>`;
 }
 
 /* ---------- Matrix: ein gemeinsames Raster statt einzelner Karten ---------- */
