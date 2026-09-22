@@ -254,6 +254,24 @@ svg{display:block}
 .trow.sub{padding-left:25px}
 .trow.sub .ico-tile{width:27px;height:27px}
 .tlist button:disabled{opacity:.4}
+/* Gruppen: eigene Karte, Kopfzeile farbig abgesetzt */
+.tgroup{padding-top:0;overflow:hidden}
+.tghead{width:auto;margin:0 -14px;padding:11px 14px;background:var(--accent-soft);border-top:none}
+.tgroup.closed .tghead{margin-bottom:-2px}
+.tghead .ico-tile{background:var(--accent)}
+.tghead .ico-tile svg{stroke:var(--surface)}
+.tghead .tname .n{font-family:"Fraunces",serif;font-weight:500;font-size:16.5px;color:var(--accent-ink)}
+.tghead .mchev{stroke:var(--accent-ink)}
+.tghead+.trow{border-top:none}
+.tghead .tstatus{background:var(--surface)}
+/* Woche: Gruppenzeile als farbiges Band, Spalten bleiben ausgerichtet */
+.mrow.grp{background:var(--accent-soft);border-radius:10px;margin:4px -6px 1px;padding:6px;border-top:none}
+.mrow.grp .mname span{font-family:"Fraunces",serif;font-weight:500;font-size:13px;color:var(--accent-ink)}
+.mrow.grp .ico-tile{background:var(--accent)}
+.mrow.grp .ico-tile svg{stroke:var(--surface)}
+.mrow.grp .mchev{stroke:var(--accent-ink)}
+.mrow.grp .mcell{background:var(--surface)}
+.mrow.grp+.mrow{border-top:none}
 /* Heute-Zeile: Name oeffnet Bearbeiten, Feld oeffnet das Tagesblatt */
 .trow:active{transform:none}
 .trow-open:active,.tstatus:active{transform:scale(.96)}
@@ -1100,14 +1118,15 @@ function todayListHTML(dStr,viewDate,now){
   const isToday=dStr===todayStr();
   const dis=isFuture?'disabled':'';
   const shown=h=>dueOnDate(h,viewDate)||h.situations.some(s=>getE(h.id,s.id,dStr)!==undefined);
-  let rows='';
+  let rows='',cards='';
   S.groups.forEach(g=>{
     const {due}=groupDayCounts(g,dStr);
     if(!due)return;
     // Gruppenfeld: ein Segment je faelliger Gewohnheit, ohne Zahlen
     const segs=groupHabits(g).filter(h=>isSchedDay(h,parse(dStr))).map(h=>{
       const st=dayFull(h,dStr);return `<i class="${st==='g'||st==='o'||st==='r'?st:''}"></i>`;}).join('');
-    rows+=`<div class="trow-grp"><div class="trow">
+    // jede Gruppe ist eine eigene Karte mit farbig abgesetzter Kopfzeile
+    cards+=`<div class="tlist tgroup ${g.collapsed?'closed':''}"><div class="trow tghead">
       <button class="tchev" onclick="toggleGroup('${g.id}')"
         aria-label="${g.collapsed?'Gruppe aufklappen':'Gruppe zuklappen'}">
         <svg class="mchev ${g.collapsed?'':'open'}" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
@@ -1118,12 +1137,12 @@ function todayListHTML(dStr,viewDate,now){
       </button>
       <button class="tstatus" ${dis} onclick="openGroupDay('${g.id}','${dStr}')" aria-label="${esc(g.name)} tracken">${segs}</button>
     </div>`;
-    if(!g.collapsed)groupHabits(g).filter(shown).forEach(h=>{rows+=todayHabitRowHTML(h,dStr,dis,true,isToday);});
-    rows+=`</div>`;
+    if(!g.collapsed)groupHabits(g).filter(shown).forEach(h=>{cards+=todayHabitRowHTML(h,dStr,dis,false,isToday);});
+    cards+=`</div>`;
   });
   ungroupedHabits().filter(shown).forEach(h=>{rows+=todayHabitRowHTML(h,dStr,dis,false,isToday);});
-  if(!rows)return `<div class="tlist"><div class="tempty">Für diesen Tag ist nichts geplant.</div></div>`;
-  return `<div class="tlist">${rows}</div>`;
+  if(!rows&&!cards)return `<div class="tlist"><div class="tempty">Für diesen Tag ist nichts geplant.</div></div>`;
+  return cards+(rows?`<div class="tlist">${rows}</div>`:'');
 }
 
 /* ---------- Matrix: ein gemeinsames Raster statt einzelner Karten ---------- */
@@ -1190,7 +1209,7 @@ function groupRowHTML(g,mon,tStr,now){
     cells+=`<button class="mcell ${isToday?'today':''} ${isFuture?'future':''}"
       ${isFuture?'disabled':''} onclick="openGroupDay('${g.id}','${date}')" aria-label="${esc(g.name)} ${d.getDate()}.">${segs}</button>`;
   }
-  let out=`<div class="mgrid mrow">
+  let out=`<div class="mgrid mrow grp">
     <button onclick="toggleGroup('${g.id}')" aria-label="${g.collapsed?'Gruppe aufklappen':'Gruppe zuklappen'}"
       style="width:16px;height:16px;display:flex;align-items:center;justify-content:center">
       <svg class="mchev ${g.collapsed?'':'open'}" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
