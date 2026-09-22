@@ -23,7 +23,7 @@
   --ink:#211f1b; --ink-soft:#4c4842; --muted:#8a857c; --faint:#b6b1a7;
   --line:rgba(30,28,24,.08); --line-2:rgba(30,28,24,.14);
   --accent:#4d7a68; --accent-soft:#e2ebe6; --accent-ink:#2f5648;
-  --g1:#93e3a4; --g2:#53bd75; --o1:#ffc47a; --o2:#f4964a; --r1:#dd8175; --r2:#c25b4f;
+  --g1:#93e3a4; --g2:#53bd75; --o1:#ffc47a; --o2:#f4964a; --r1:#dd8175; --r2:#c25b4f; --g-ink:#2f8a4f;
   --shadow:0 1px 2px rgba(30,28,24,.05),0 8px 24px -12px rgba(30,28,24,.14);
   --shadow-lg:0 12px 40px -12px rgba(30,28,24,.28);
   --radius:18px; --radius-sm:12px;
@@ -35,7 +35,7 @@
     --ink:#ece8e1; --ink-soft:#c4bfb6; --muted:#948f85; --faint:#615c54;
     --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.14);
     --accent:#77a893; --accent-soft:#233029; --accent-ink:#9cc4b3;
-    --g1:#93e3a4; --g2:#53bd75; --o1:#ffc47a; --o2:#f4964a; --r1:#dd8175; --r2:#c25b4f;
+    --g1:#93e3a4; --g2:#53bd75; --o1:#ffc47a; --o2:#f4964a; --r1:#dd8175; --r2:#c25b4f; --g-ink:#93e3a4;
     --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -12px rgba(0,0,0,.5);
     --shadow-lg:0 12px 40px -10px rgba(0,0,0,.6);
   }
@@ -45,7 +45,7 @@
   --ink:#ece8e1; --ink-soft:#c4bfb6; --muted:#948f85; --faint:#615c54;
   --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.14);
   --accent:#77a893; --accent-soft:#233029; --accent-ink:#9cc4b3;
-  --g1:#93e3a4; --g2:#53bd75; --o1:#ffc47a; --o2:#f4964a; --r1:#dd8175; --r2:#c25b4f;
+  --g1:#93e3a4; --g2:#53bd75; --o1:#ffc47a; --o2:#f4964a; --r1:#dd8175; --r2:#c25b4f; --g-ink:#93e3a4;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -12px rgba(0,0,0,.5);
   --shadow-lg:0 12px 40px -10px rgba(0,0,0,.6);
 }
@@ -56,7 +56,7 @@ body{background:var(--bg);color:var(--ink);
   font-family:"Manrope",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 button{font-family:inherit;color:inherit;border:none;background:none;cursor:pointer;padding:0}
-input,select{font-family:inherit;font-size:16px}
+input,select,textarea{font-family:inherit;font-size:16px}
 ::selection{background:var(--accent-soft)}
 svg{display:block}
 
@@ -196,7 +196,7 @@ svg{display:block}
 /* ---- Matrix: gemeinsames Raster fuer alle Gewohnheiten ---- */
 .matrix{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
   padding:10px 10px 6px;box-shadow:var(--shadow);margin-bottom:9px}
-.mgrid{display:grid;grid-template-columns:16px 90px repeat(7,minmax(0,1fr)) 28px;align-items:center;gap:3px}
+.mgrid{display:grid;grid-template-columns:16px 90px repeat(7,minmax(0,1fr)) 32px;align-items:center;gap:3px}
 .mhead{padding-bottom:7px;border-bottom:1px solid var(--line);margin-bottom:1px}
 .mhead .dl{text-align:center;font-size:9px;font-weight:700;color:var(--faint);letter-spacing:.02em;text-transform:uppercase}
 .mrow{padding:6px 0;border-top:1px solid var(--line)}
@@ -219,7 +219,17 @@ svg{display:block}
 .mseg.g{background:linear-gradient(150deg,var(--g1),var(--g2))}
 .mseg.o{background:linear-gradient(150deg,var(--o1),var(--o2))}
 .mseg.r{background:linear-gradient(150deg,var(--r1),var(--r2))}
-.mstreak{font-size:10px;font-weight:700;color:var(--ink-soft);text-align:right;font-variant-numeric:tabular-nums}
+.mstreak{font-size:11px;font-weight:800;color:var(--faint);font-variant-numeric:tabular-nums;
+  display:flex;align-items:center;justify-content:flex-end;gap:1px}
+.mstreak svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.mstreak.on{color:var(--accent-ink)}
+.mstreak.warn{color:var(--o2)}
+/* Meilenstein-Punkt am Icon (Matrix hat keinen Platz fuer Text) */
+.ico-tile.ms-stable,.ico-tile.ms-archive{position:relative}
+.ico-tile.ms-stable::after,.ico-tile.ms-archive::after{content:"";position:absolute;top:-2px;right:-2px;width:7px;height:7px;
+  border-radius:50%;border:1.5px solid var(--surface)}
+.ico-tile.ms-stable::after{background:var(--accent)}
+.ico-tile.ms-archive::after{background:var(--g2)}
 
 /* ---- Umschalter Woche/Heute + Tages-Checkliste ---- */
 .view-toggle{margin-bottom:9px}
@@ -244,6 +254,28 @@ svg{display:block}
 .trow.sub{padding-left:25px}
 .trow.sub .ico-tile{width:27px;height:27px}
 .tlist button:disabled{opacity:.4}
+/* Heute-Zeile: Name oeffnet Bearbeiten, Feld oeffnet das Tagesblatt */
+.trow:active{transform:none}
+.trow-open:active,.tstatus:active{transform:scale(.96)}
+.trow-open,.tstatus{transition:transform .2s cubic-bezier(.34,1.5,.5,1)}
+.tname .n{display:flex;align-items:center;gap:5px}
+.tname .n span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.tname .n svg{width:13px;height:13px;flex-shrink:0;stroke:var(--faint);fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.tmeta{display:flex;align-items:center;gap:6px;margin-top:2px;min-width:0}
+.tmeta .sit{margin-top:0}
+.tmeta .warn{font-size:11px;font-weight:700;color:var(--o2);white-space:nowrap}
+.tstatus{display:flex;overflow:hidden;gap:0}
+.tstatus i{flex:1;display:block}
+.tstatus i+i{border-left:1.5px solid var(--surface)}
+.tstatus i.g{background:linear-gradient(150deg,var(--g1),var(--g2))}
+.tstatus i.o{background:linear-gradient(150deg,var(--o1),var(--o2))}
+.tstatus i.r{background:linear-gradient(150deg,var(--r1),var(--r2))}
+.trow .chip-streak{padding:5px 10px 5px 8px;font-size:13.5px;font-weight:800}
+.trow .chip-streak svg{width:14px;height:14px;stroke-width:2.1}
+.chip-streak.warn{background:rgba(244,150,74,.16);color:var(--o2)}
+.badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:10.5px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.badge.stable{background:var(--accent-soft);color:var(--accent-ink)}
+.badge.archive{background:rgba(83,189,117,.16);color:var(--g-ink)}
 
 .add-btn{width:100%;padding:14px;border-radius:var(--radius);border:1.5px dashed var(--line-2);color:var(--muted);
   font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;background:transparent;transition:.2s}
@@ -441,6 +473,103 @@ select.inp{appearance:none;-webkit-appearance:none;
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.big{background:var(--accent);color:#fff;font-size:14.5px;padding:13px 22px}
 :root[data-theme="dark"] .toast.big,:root:not([data-theme="light"]) .toast.big{color:#10201a}
+
+textarea.inp{resize:vertical;min-height:74px;line-height:1.45;font-size:16px}
+.ghost-btn{width:100%;padding:14px;border-radius:14px;background:var(--accent-soft);color:var(--accent-ink);font-weight:700;font-size:14px;margin-top:8px}
+.ghost-btn:active{transform:scale(.98)}
+
+/* ---- Meilensteine im Editor ---- */
+.ms-box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 13px}
+.ms-row{padding:10px 0;border-top:1px solid var(--line)}
+.ms-row:first-child{border-top:none}
+.ms-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.ms-top b{font-size:13.5px}
+.ms-top .ok{font-size:11.5px;font-weight:700;color:var(--g-ink)}
+.ms-top .no{font-size:11.5px;font-weight:600;color:var(--faint)}
+.ms-line{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-weight:600;margin-top:5px}
+.ms-line .y{color:var(--g-ink)}
+
+/* ---- Einstellungen: kompakter Stepper ---- */
+.mini-step{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.mini-step button{width:30px;height:30px;border-radius:9px;background:var(--surface-2);font-size:18px;display:grid;place-items:center;color:var(--ink-soft)}
+.mini-step button:active{transform:scale(.88)}
+.mini-step .v{min-width:34px;text-align:center;font-weight:800;font-size:14.5px;font-variant-numeric:tabular-nums}
+.set-note{font-size:12px;color:var(--muted);font-weight:500;line-height:1.45;padding:0 6px;margin:-4px 0 14px}
+
+/* ---- Gewohnheiten-Tab: Ideen ---- */
+.isec{margin-bottom:6px}
+.isec-head{width:100%;display:flex;align-items:center;gap:8px;padding:10px 4px 8px;text-align:left}
+.isec-head .t{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);flex:1}
+.isec-head .c{font-size:12px;font-weight:700;color:var(--faint);font-variant-numeric:tabular-nums}
+.ilist{min-height:10px;padding-bottom:4px}
+.ilist .idrop{border:1.5px dashed var(--line-2);border-radius:14px;padding:12px;text-align:center;color:var(--faint);font-size:12.5px;font-weight:600;margin-bottom:9px}
+.idea-card{align-items:center;cursor:pointer}
+.idea-card .itext{padding-top:0}
+.idea-card .inote{font-size:12px;color:var(--muted);font-weight:500;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ihandle{width:34px;height:38px;margin:-6px -6px -6px 0;flex-shrink:0;display:grid;place-items:center;touch-action:none;cursor:grab}
+.ihandle svg{width:18px;height:18px;fill:var(--faint);stroke:none}
+.idea-card.dragging{box-shadow:var(--shadow-lg);transform:scale(1.02);opacity:.95;position:relative;z-index:5;transition:none}
+
+/* ---- Archiv ---- */
+.arch-card{width:100%;display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);
+  border-radius:14px;padding:12px 13px;margin-bottom:9px;box-shadow:var(--shadow);text-align:left;transition:transform .2s cubic-bezier(.34,1.5,.5,1)}
+.arch-card:active{transform:scale(.985)}
+.arch-card .ico-tile{width:36px;height:36px;border-radius:11px}
+.arch-card .ico-tile svg{width:19px;height:19px}
+.arch-card .ab{flex:1;min-width:0}
+.arch-card .an{font-size:14.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.arch-card .ad{font-size:12px;color:var(--muted);font-weight:500;margin-top:1px}
+.arch-card .ap{font-family:"Fraunces",serif;font-size:19px;font-weight:500;color:var(--g-ink);flex-shrink:0}
+.arch-sum{display:flex;gap:10px;margin-bottom:16px}
+.arch-sum div{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:11px;text-align:center}
+.arch-sum b{display:block;font-family:"Fraunces",serif;font-weight:500;font-size:22px}
+.arch-sum span{font-size:11px;color:var(--muted);font-weight:600}
+.note-box{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:11px 13px;font-size:13.5px;line-height:1.45;margin-bottom:12px;white-space:pre-wrap}
+
+/* ---- Wissen ---- */
+.kcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin-bottom:9px;box-shadow:var(--shadow);overflow:hidden}
+.kcard summary{list-style:none;display:flex;align-items:center;gap:11px;padding:13px 14px;cursor:pointer}
+.kcard summary::-webkit-details-marker{display:none}
+.kcard summary .ico-tile{width:32px;height:32px}
+.kcard summary .kt{flex:1;min-width:0}
+.kcard summary .kt b{display:block;font-size:14.5px}
+.kcard summary .kt span{display:block;font-size:12px;color:var(--muted);font-weight:500}
+.kcard summary .mchev{flex-shrink:0}
+.kcard[open] summary .mchev{transform:rotate(180deg)}
+.kbody{padding:0 15px 14px;font-size:13.5px;line-height:1.55;color:var(--ink-soft)}
+.kbody p{margin:0 0 9px}
+.kbody h4{margin:12px 0 5px;font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--accent-ink)}
+.kbody ul{margin:0 0 8px;padding-left:18px}
+.kbody li{margin-bottom:5px}
+.kbody li b{color:var(--ink)}
+.kbody .law{background:var(--surface-2);border-radius:11px;padding:9px 11px;margin-bottom:8px}
+.kbody .law b{display:block;color:var(--ink);font-size:13.5px;margin-bottom:2px}
+
+/* ---- Feier-Overlay ---- */
+.cel{position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:24px;
+  background:rgba(20,18,15,.5);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+  opacity:0;pointer-events:none;transition:opacity .3s}
+.cel.show{opacity:1;pointer-events:auto}
+.cel-card{position:relative;z-index:2;width:100%;max-width:340px;background:var(--bg);border-radius:26px;padding:28px 22px 18px;
+  text-align:center;box-shadow:var(--shadow-lg);transform:scale(.7) translateY(20px);opacity:0}
+.cel.show .cel-card{animation:celIn .6s cubic-bezier(.34,1.56,.5,1) .05s forwards}
+@keyframes celIn{to{transform:none;opacity:1}}
+.cel-ico{width:74px;height:74px;margin:0 auto 14px;border-radius:22px;display:grid;place-items:center;position:relative;
+  background:linear-gradient(150deg,var(--g1),var(--g2))}
+.cel-ico svg{width:38px;height:38px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.cel-ico.stable{background:linear-gradient(150deg,var(--accent-soft),var(--accent))}
+.cel-ico::before{content:"";position:absolute;inset:-8px;border-radius:28px;border:2px solid var(--g2);opacity:0}
+.cel.show .cel-ico::before{animation:ring 1.4s ease-out .35s infinite}
+@keyframes ring{0%{transform:scale(.85);opacity:.7}100%{transform:scale(1.35);opacity:0}}
+.cel-kicker{font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:4px}
+.cel-card h2{font-family:"Fraunces",serif;font-weight:500;font-size:26px;line-height:1.15;margin:0 0 8px;letter-spacing:-.01em}
+.cel-card p{font-size:14px;line-height:1.5;color:var(--ink-soft);margin:0 0 18px}
+.cel-card .danger-btn{color:var(--muted);margin-top:4px}
+.confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1}
+.confetti i{position:absolute;top:-16px;width:8px;height:12px;border-radius:2px;opacity:0}
+.cel.show .confetti i{animation:fall var(--dur,2.6s) cubic-bezier(.25,.6,.45,1) var(--del,0s) forwards}
+@keyframes fall{0%{opacity:1;transform:translate(0,0) rotate(0)}85%{opacity:1}
+  100%{opacity:0;transform:translate(var(--dx,0px),105vh) rotate(var(--rot,540deg))}}
 </style>
 </head>
 <body>
@@ -462,7 +591,7 @@ select.inp{appearance:none;-webkit-appearance:none;
     <button class="nav-item" data-view="stats">
       <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="7"/><rect x="12" y="7" width="3" height="11"/><rect x="17" y="13" width="3" height="5"/></svg><span>Statistik</span></button>
     <button class="nav-item" data-view="ideas">
-      <svg viewBox="0 0 24 24"><path d="M9.5 18h5"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.4c.7.7 1 1.3 1 2.6h6c0-1.3.3-1.9 1-2.6A6 6 0 0 0 12 3z"/></svg><span>Ideen</span></button>
+      <svg viewBox="0 0 24 24"><path d="M9.5 18h5"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.4c.7.7 1 1.3 1 2.6h6c0-1.3.3-1.9 1-2.6A6 6 0 0 0 12 3z"/></svg><span>Gewohnheiten</span></button>
     <button class="nav-item" data-view="settings">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Einstellungen</span></button>
   </div></nav>
@@ -476,6 +605,7 @@ select.inp{appearance:none;-webkit-appearance:none;
   <div class="sheet-body" id="sheetBody"></div>
 </div>
 <div class="toast" id="toast"></div>
+<div class="cel" id="cel"><div class="confetti" id="confetti"></div><div class="cel-card" id="celCard"></div></div>
 
 <script>
 "use strict";
@@ -533,7 +663,10 @@ const EMOJI_MAP={'🌱':'sprout','💪':'dumbbell','📖':'book','🧘':'yoga','
 
 /* ---------- State ---------- */
 const KEY='cadence_v1';
-const DEFAULT={habits:[],entries:{},ideas:[],groups:[],settings:{theme:'system',notif:false,notifTime:'20:00'},nextId:1};
+// Schwellen fuer die automatischen Meilensteine (in den Einstellungen aenderbar)
+const MS_DEFAULTS={stableMinDays:21,stableWindow:14,archiveMinDays:60,archiveWindow:30,archivePct:90};
+const DEFAULT={habits:[],entries:{},ideas:[],groups:[],
+  settings:Object.assign({theme:'system',ideaCollapsed:{},push:{enabled:false,time:'21:00',id:null}},MS_DEFAULTS),nextId:1};
 let S=load();
 function load(){try{const raw=localStorage.getItem(KEY);if(raw)return Object.assign({},DEFAULT,JSON.parse(raw));}catch(e){}return JSON.parse(JSON.stringify(DEFAULT));}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
@@ -555,8 +688,16 @@ function migrate(){
     if(!h.reminders.times)h.reminders.times=h.reminders.time?[h.reminders.time]:[];
     (h.situations||[]).forEach(s=>{if(!s.id)s.id=uid();});
     if(!h.situations||!h.situations.length)h.situations=[{id:uid(),name:'Standard'}];
+    if(h.note==null)h.note='';
+    if(h.archived==null){h.archived=false;h.archivedAt=null;}
   });
+  S.settings=Object.assign(JSON.parse(JSON.stringify(DEFAULT.settings)),S.settings);
+  if(!S.settings.push||typeof S.settings.push!=='object')S.settings.push={enabled:false,time:'21:00',id:null};
+  if(!S.settings.ideaCollapsed)S.settings.ideaCollapsed={};
+  // bereits erreichte Meilensteine still als "gefeiert" markieren - keine Feier-Welle beim ersten Start
+  S.habits.forEach(h=>{if(!h.milestones)h.milestones={stable:isStable(h),archive:isArchiveReady(h)};});
   if(!Array.isArray(S.ideas))S.ideas=[];
+  S.ideas.forEach(i=>{if(i.note==null)i.note='';if(!i.prio)i.prio='mid';});
   if(!Array.isArray(S.groups))S.groups=[];
   const known=new Set(S.habits.map(h=>h.id));
   S.groups.forEach(g=>{
@@ -569,8 +710,10 @@ function migrate(){
 }
 /* a habit belongs to at most one group */
 function groupOf(hid){return S.groups.find(g=>g.habitIds.includes(hid))||null;}
-function ungroupedHabits(){return S.habits.filter(h=>!groupOf(h.id));}
-function groupHabits(g){return g.habitIds.map(id=>S.habits.find(h=>h.id===id)).filter(Boolean);}
+// archivierte Gewohnheiten tauchen nirgends im Tracking auf, behalten aber ihre Gruppe
+function activeHabits(){return S.habits.filter(h=>!h.archived);}
+function ungroupedHabits(){return activeHabits().filter(h=>!groupOf(h.id));}
+function groupHabits(g){return g.habitIds.map(id=>S.habits.find(h=>h.id===id)).filter(h=>h&&!h.archived);}
 migrate();
 
 /* ---------- Date helpers ---------- */
@@ -632,32 +775,107 @@ function dueOnDate(h,d){
 function dueToday(h){return dueOnDate(h,today());}
 
 /* ---------- Streak / progress ---------- */
-// Streak = consecutive fulfilled scheduled days (orange excused/skipped,
-// today counted only once done; a missed/failed past scheduled day breaks it).
+// Erster Tag der Gewohnheit: startDate oder frueherer Eintrag (falls nachgetragen)
+function habitStart(h){
+  let first=h.startDate||todayStr();
+  const e=S.entries[h.id]||{};
+  Object.values(e).forEach(m=>Object.keys(m).forEach(k=>{if(k<first)first=k;}));
+  return parse(first);
+}
+function trackedDays(h){
+  const t=today();const t0=new Date(t.getFullYear(),t.getMonth(),t.getDate());
+  return Math.max(0,Math.round((t0-habitStart(h))/86400000)+1);
+}
+// Streak nach "nie zweimal auslassen": gezaehlt werden erledigte geplante Tage.
+// Ein einzelner verpasster Tag zaehlt nicht mit, bricht aber nicht - erst zwei
+// verpasste geplante Tage hintereinander. Orange und heute-noch-offen: uebersprungen.
 function streak(h){
-  let n=0;let d=today();
-  for(let i=0;i<800;i++){
+  let n=0,miss=0;let d=today();const start=habitStart(h);const tStr=todayStr();
+  for(let i=0;i<1500&&d>=start;i++){
     if(!isSchedDay(h,d)){d=addDays(d,-1);continue;}
-    const st=dayFull(h,ds(d));const isToday=ds(d)===todayStr();
-    if(st==='g')n++;
-    else if(st==='o'){/* excused – skip */}
-    else if((st==='pending'||st===undefined)&&isToday){/* today not finished – skip */}
-    else break; // red, or a past day that was missed / left incomplete
+    const st=dayFull(h,ds(d));
+    if(st==='g'){n++;miss=0;}
+    else if(st==='o'){/* entschuldigt */}
+    else if(ds(d)===tStr&&st!=='r'){/* heute noch offen */}
+    else{miss++;if(miss>=2)break;}
     d=addDays(d,-1);
   }
   return n;
+}
+// Letzter geplanter Tag vor heute verpasst und heute noch nicht erledigt -> "nicht zweimal!"
+function streakAtRisk(h){
+  if(h.schedule==='weekly'||h.schedule==='monthly')return false;
+  const tStr=todayStr();const stT=dayFull(h,tStr);
+  if(isSchedDay(h,today())&&(stT==='g'||stT==='o'))return false;
+  const start=habitStart(h);let d=addDays(today(),-1);
+  for(let i=0;i<60&&d>=start;i++){
+    if(isSchedDay(h,d)){const st=dayFull(h,ds(d));return !(st==='g'||st==='o');}
+    d=addDays(d,-1);
+  }
+  return false;
 }
 function weekGreens(h,mon){mon=mon||mondayOf(today());let c=0;for(let i=0;i<7;i++)if(dayFull(h,ds(addDays(mon,i)))==='g')c++;return c;}
 function monthGreens(h,d){const y=d.getFullYear(),m=d.getMonth(),days=new Date(y,m+1,0).getDate();let c=0;
   for(let i=1;i<=days;i++)if(dayFull(h,ds(new Date(y,m,i)))==='g')c++;return c;}
 // Consecutive weeks/months in which the frequency target was reached.
 function weekMet(h,mon){return weekGreens(h,mon)>=h.weeklyTarget;}
+// Wochen/Monate: eine verfehlte Periode wird toleriert, zwei in Folge brechen die Serie.
+// Die laufende Periode zaehlt nur, wenn sie schon erfuellt ist.
 function weekStreak(h){let mon=mondayOf(today());if(!weekMet(h,mon))mon=addDays(mon,-7);
-  let n=0;for(let i=0;i<300;i++){if(weekMet(h,mon)){n++;mon=addDays(mon,-7);}else break;}return n;}
+  const first=mondayOf(habitStart(h));let n=0,miss=0;
+  for(let i=0;i<300&&mon>=first;i++){if(weekMet(h,mon)){n++;miss=0;}else if(++miss>=2)break;mon=addDays(mon,-7);}
+  return n;}
 function monthMet(h,d){return monthGreens(h,d)>=h.monthlyTarget;}
 function monthStreak(h){let d=new Date(today().getFullYear(),today().getMonth(),1);
   if(!monthMet(h,d))d=new Date(d.getFullYear(),d.getMonth()-1,1);
-  let n=0;for(let i=0;i<160;i++){if(monthMet(h,d)){n++;d=new Date(d.getFullYear(),d.getMonth()-1,1);}else break;}return n;}
+  const s=habitStart(h);const first=new Date(s.getFullYear(),s.getMonth(),1);let n=0,miss=0;
+  for(let i=0;i<160&&d>=first;i++){if(monthMet(h,d)){n++;miss=0;}else if(++miss>=2)break;d=new Date(d.getFullYear(),d.getMonth()-1,1);}
+  return n;}
+
+/* ---------- Meilensteine: Stabil / Archiv-reif ---------- */
+// Perioden der letzten `days` Tage, neueste zuerst: 'ok' | 'miss' | 'skip' (entschuldigt/heute offen).
+// Tages-Rhythmen: geplante Tage; X pro Woche/Monat: abgeschlossene (oder schon erfuellte) Wochen/Monate.
+function recentPeriods(h,days){
+  const start=habitStart(h);const out=[];
+  if(h.schedule==='weekly'){
+    let mon=mondayOf(today());if(!weekMet(h,mon))mon=addDays(mon,-7);
+    for(let i=0;i<Math.ceil(days/7);i++){
+      if(addDays(mon,6)<start)break;
+      const met=weekMet(h,mon);if(!met&&mon<start)break;   // angebrochene Startwoche nicht als Fehler werten
+      out.push(met?'ok':'miss');mon=addDays(mon,-7);}
+    return out;
+  }
+  if(h.schedule==='monthly'){
+    let d=new Date(today().getFullYear(),today().getMonth(),1);if(!monthMet(h,d))d=new Date(d.getFullYear(),d.getMonth()-1,1);
+    for(let i=0;i<Math.max(1,Math.round(days/30));i++){
+      if(new Date(d.getFullYear(),d.getMonth()+1,0)<start)break;
+      const met=monthMet(h,d);if(!met&&d<start)break;
+      out.push(met?'ok':'miss');d=new Date(d.getFullYear(),d.getMonth()-1,1);}
+    return out;
+  }
+  let d=today();const tStr=todayStr();
+  for(let i=0;i<days&&d>=start;i++){
+    if(isSchedDay(h,d)){const st=dayFull(h,ds(d));
+      if(st==='g')out.push('ok');
+      else if(st==='o'||(ds(d)===tStr&&st!=='r'))out.push('skip');
+      else out.push('miss');}
+    d=addDays(d,-1);
+  }
+  return out;
+}
+function stableInfo(h){const c=S.settings;const p=recentPeriods(h,c.stableWindow);
+  const clean=!p.includes('miss')&&p.includes('ok');const days=trackedDays(h);
+  return {days,minDays:c.stableMinDays,window:c.stableWindow,clean,met:days>=c.stableMinDays&&clean};}
+function archiveInfo(h){const c=S.settings;const p=recentPeriods(h,c.archiveWindow);
+  const ok=p.filter(x=>x==='ok').length,miss=p.filter(x=>x==='miss').length;
+  const rate=(ok+miss)?Math.round(ok/(ok+miss)*100):0;const days=trackedDays(h);
+  return {days,minDays:c.archiveMinDays,window:c.archiveWindow,pct:c.archivePct,rate,
+    met:days>=c.archiveMinDays&&(ok+miss)>0&&rate>=c.archivePct};}
+function isStable(h){return stableInfo(h).met;}
+function isArchiveReady(h){return archiveInfo(h).met;}
+function habitStatus(h){return isArchiveReady(h)?'archive':isStable(h)?'stable':null;}
+function statusBadge(h){const s=habitStatus(h);
+  return s==='archive'?'<span class="badge archive">Archiv-reif</span>':s==='stable'?'<span class="badge stable">Stabil</span>':'';}
 // End-goal (milestone): "N periods in a row", period = day / week / month by rhythm.
 function goalCurrent(h){
   if(h.schedule==='weekly')return weekStreak(h);
@@ -692,22 +910,75 @@ const CHIPICON={
 };
 
 /* ---------- Celebration ---------- */
+// Prueft Endziel, Stabil und Archiv-reif. Jeder Anlass feiert genau einmal
+// (Merker am Habit); das Endziel darf nach einem Abbruch erneut gefeiert werden.
 function maybeCelebrate(h){
-  if(!h.goalEnabled||!h.goalN)return;
-  if(goalMet(h)){
-    if(!h.celebrated){h.celebrated=true;save();celebrate(h.name+': Ziel erreicht – '+h.goalN+' '+goalUnit(h)+'!');}
-  }else if(h.celebrated){h.celebrated=false;save();}
+  if(!h||h.archived)return;
+  const q=[];
+  if(h.goalEnabled&&h.goalN){
+    if(goalMet(h)){if(!h.celebrated){h.celebrated=true;q.push('goal');}}
+    else if(h.celebrated)h.celebrated=false;
+  }
+  if(!h.milestones)h.milestones={stable:false,archive:false};
+  if(!h.milestones.stable&&isStable(h)){h.milestones.stable=true;q.push('stable');}
+  if(!h.milestones.archive&&isArchiveReady(h)){h.milestones.archive=true;q.push('archive');}
+  save();
+  q.forEach(k=>celQueue.push({hid:h.id,kind:k}));
+  if(q.length&&!celOpen)setTimeout(nextCelebration,320);   // erst das Tagesblatt zugehen lassen
 }
-function celebrate(text){
-  toast('🎉 '+text,true);
-  try{if('Notification'in window&&Notification.permission==='granted')new Notification('Cadence 🎉',{body:text});}catch(e){}
+const celQueue=[];let celOpen=false;
+const celEl=document.getElementById('cel');
+function nextCelebration(){
+  const it=celQueue.shift();
+  if(!it){celEl.classList.remove('show');celOpen=false;return;}
+  const h=S.habits.find(x=>x.id===it.hid);if(!h){nextCelebration();return;}
+  let kicker,title,text,btns;
+  const later=`<button class="danger-btn" onclick="nextCelebration()">Weiter tracken</button>`;
+  if(it.kind==='goal'){
+    kicker='Ziel erreicht';title=`${h.goalN} ${goalUnit(h)}!`;
+    text=`<b>${esc(h.name)}</b> – du hast durchgezogen. Wenn die Gewohnheit jetzt sitzt, kannst du sie ins Archiv legen.`;
+    btns=`<button class="primary" onclick="archiveHabit('${h.id}');nextCelebration()">Archivieren</button>${later}`;
+  }else if(it.kind==='stable'){
+    const c=S.settings;kicker='Meilenstein';title='Stabil!';
+    text=`<b>${esc(h.name)}</b> läuft seit ${c.stableWindow} Tagen ohne Aussetzer. Zeit, eine neue Gewohnheit dazuzunehmen.`;
+    btns=`<button class="primary" onclick="nextCelebration();openIdeasTab()">Zu meinen Ideen</button>
+      <button class="danger-btn" onclick="nextCelebration()">Später</button>`;
+  }else{
+    const a=archiveInfo(h);kicker='Meilenstein';title='Archiv-reif!';
+    text=`<b>${esc(h.name)}</b> läuft von allein – ${a.rate}&nbsp;% in den letzten ${a.window} Tagen. Du kannst sie jetzt archivieren.`;
+    btns=`<button class="primary" onclick="archiveHabit('${h.id}');nextCelebration()">Archivieren</button>${later}`;
+  }
+  document.getElementById('celCard').innerHTML=`
+    <div class="cel-ico ${it.kind==='stable'?'stable':''}">${svgIcon(h.icon)}</div>
+    <div class="cel-kicker">${kicker}</div><h2>${title}</h2><p>${text}</p>${btns}`;
+  // Konfetti neu erzeugen, damit die Animation bei jedem Anlass wieder startet
+  const cols=['var(--g1)','var(--g2)','var(--o1)','var(--o2)','var(--accent)','var(--r1)'];
+  let conf='';
+  for(let i=0;i<42;i++){
+    conf+=`<i style="left:${(Math.random()*100).toFixed(1)}%;background:${cols[i%cols.length]};
+      --del:${(Math.random()*.6).toFixed(2)}s;--dur:${(2.1+Math.random()*1.4).toFixed(2)}s;
+      --dx:${Math.round(Math.random()*160-80)}px;--rot:${Math.round(Math.random()*900-450)}deg;
+      ${i%3===0?'border-radius:50%;width:8px;height:8px;':''}"></i>`;
+  }
+  document.getElementById('confetti').innerHTML=conf;
+  celEl.classList.remove('show');void celEl.offsetWidth;celEl.classList.add('show');celOpen=true;
+}
+function archiveHabit(hid){
+  const h=S.habits.find(x=>x.id===hid);if(!h)return;
+  h.archived=true;h.archivedAt=todayStr();save();hideSheet();renderTrack();
+  if(activeView()==='ideas')renderIdeas();
+  toast('Ins Archiv gelegt');
+}
+function unarchiveHabit(hid){
+  const h=S.habits.find(x=>x.id===hid);if(!h)return;
+  h.archived=false;h.archivedAt=null;save();hideSheet();renderIdeas();toast('Wieder aktiv');
 }
 
 /* ---------- TRACK view ---------- */
 const V={track:document.getElementById('view-track'),stats:document.getElementById('view-stats'),
   ideas:document.getElementById('view-ideas'),settings:document.getElementById('view-settings')};
 let weekOffset=0;
-let trackView='week';   // 'week' = Matrix, 'today' = Tages-Checkliste
+let trackView='today';  // 'today' = Tages-Checkliste (Startansicht), 'week' = Matrix
 let dayOffset=0;        // Tagesversatz fuer die Heute-Ansicht, wie weekOffset fuer die Woche
 function setTrackView(v){if(trackView===v)return;trackView=v;renderTrack();}
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
@@ -731,7 +1002,7 @@ function dayBlend(g,o,r){
 }
 function todayCardHTML(){
   let total=0,tracked=0,g=0,o=0,r=0;
-  S.habits.forEach(h=>{const due=dueToday(h);
+  activeHabits().forEach(h=>{const due=dueToday(h);
     h.situations.forEach(s=>{const v=getE(h.id,s.id,todayStr());
       if(!due&&!v)return;              // flexible habit (Woche/Monat) not tracked today → ignore
       total++;
@@ -746,7 +1017,7 @@ function todayCardHTML(){
 }
 function renderTrack(){
   const el=V.track;
-  if(S.habits.length===0){
+  if(activeHabits().length===0){
     el.innerHTML=`<div class="empty"><div class="ico">${svgIcon('sprout')}</div>
       <h2>Noch keine Gewohnheiten</h2><p>Lege deine erste Gewohnheit an und tracke sie Tag&nbsp;für&nbsp;Tag.</p>
       <button class="primary" style="max-width:230px;margin:0 auto" onclick="openHabitEditor()">Erste Gewohnheit anlegen</button></div>`;
@@ -800,54 +1071,57 @@ function renderTrack(){
 /* Tages-Checkliste: nur heute faellige (oder schon angetippte) Gewohnheiten,
    ein Statusfeld pro Zeile. Tippen oeffnet dasselbe Auswahl-Blatt wie in der
    Matrix - keine neue Interaktion, nur eine fokussierte, groessere Ansicht. */
+const NOTE_ICON='<svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>';
+// Streak-Chip: Flamme + Zahl (bzw. x/y bei Wochen-/Monatszielen), orange wenn "nicht zweimal!" droht
+function streakChipHTML(h,warn){
+  const c=chipData(h);const num=c.txt.replace(/ Tage?$/,'');
+  return `<div class="chip-streak ${c.on?'on':''} ${warn?'warn':''}" title="${c.txt}">
+    <svg viewBox="0 0 24 24">${CHIPICON[c.icon]||CHIPICON.flame}</svg>${num}</div>`;
+}
+// Eine Zeile pro Gewohnheit; mehrere Situationen erscheinen als Segmente im Statusfeld
+function todayHabitRowHTML(h,dStr,dis,sub,isToday){
+  const segs=h.situations.map(s=>`<i class="${getE(h.id,s.id,dStr)||''}"></i>`).join('');
+  const warn=isToday&&streak(h)>0&&streakAtRisk(h);
+  const meta=[statusBadge(h),
+    warn?'<span class="warn">Nicht zweimal auslassen!</span>':
+      (h.situations.length>1?`<span class="sit">${h.situations.map(s=>esc(s.name)).join(' · ')}</span>`:'')].join('');
+  return `<div class="trow ${sub?'sub':''}">
+    <button class="trow-open" onclick="openHabitEditor('${h.id}')" aria-label="${esc(h.name)} bearbeiten">
+      <div class="ico-tile">${svgIcon(h.icon)}</div>
+      <div class="tname"><div class="n"><span>${esc(h.name)}</span>${h.note&&h.note.trim()?NOTE_ICON:''}</div>
+        ${meta?`<div class="tmeta">${meta}</div>`:''}</div>
+    </button>
+    ${streakChipHTML(h,warn)}
+    <button class="tstatus" ${dis} onclick="openDay('${h.id}','${dStr}')" aria-label="${esc(h.name)} tracken">${segs}</button>
+  </div>`;
+}
 function todayListHTML(dStr,viewDate,now){
   const isFuture=viewDate>now&&dStr!==todayStr();
+  const isToday=dStr===todayStr();
   const dis=isFuture?'disabled':'';
+  const shown=h=>dueOnDate(h,viewDate)||h.situations.some(s=>getE(h.id,s.id,dStr)!==undefined);
   let rows='';
   S.groups.forEach(g=>{
-    const {due,done}=groupDayCounts(g,dStr);
+    const {due}=groupDayCounts(g,dStr);
     if(!due)return;
+    // Gruppenfeld: ein Segment je faelliger Gewohnheit, ohne Zahlen
+    const segs=groupHabits(g).filter(h=>isSchedDay(h,parse(dStr))).map(h=>{
+      const st=dayFull(h,dStr);return `<i class="${st==='g'||st==='o'||st==='r'?st:''}"></i>`;}).join('');
     rows+=`<div class="trow-grp"><div class="trow">
-      <button class="tchev" ${dis} onclick="toggleGroup('${g.id}')"
+      <button class="tchev" onclick="toggleGroup('${g.id}')"
         aria-label="${g.collapsed?'Gruppe aufklappen':'Gruppe zuklappen'}">
         <svg class="mchev ${g.collapsed?'':'open'}" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
       </button>
-      <button class="trow-open" ${dis} onclick="openGroupDay('${g.id}','${dStr}')">
+      <button class="trow-open" onclick="openGroupEditor('${g.id}')" aria-label="${esc(g.name)} bearbeiten">
         <div class="ico-tile">${svgIcon(g.icon)}</div>
-        <div class="tname"><div class="n">${esc(g.name)}</div><div class="sit">${done}/${due} erledigt</div></div>
-        <div class="tstatus ${done>=due?'g':''}"></div>
+        <div class="tname"><div class="n"><span>${esc(g.name)}</span></div></div>
       </button>
+      <button class="tstatus" ${dis} onclick="openGroupDay('${g.id}','${dStr}')" aria-label="${esc(g.name)} tracken">${segs}</button>
     </div>`;
-    if(!g.collapsed){
-      groupHabits(g).forEach(h=>{
-        const due2=dueOnDate(h,viewDate);
-        const anySet2=h.situations.some(s=>getE(h.id,s.id,dStr)!==undefined);
-        if(!due2&&!anySet2)return;
-        h.situations.forEach(s=>{
-          const v=getE(h.id,s.id,dStr);
-          rows+=`<button class="trow sub" ${dis} onclick="openDay('${h.id}','${dStr}')">
-            <div class="ico-tile">${svgIcon(h.icon)}</div>
-            <div class="tname"><div class="n">${esc(h.name)}</div>${h.situations.length>1?`<div class="sit">${esc(s.name)}</div>`:''}</div>
-            <div class="tstatus ${v||''}"></div>
-          </button>`;
-        });
-      });
-    }
+    if(!g.collapsed)groupHabits(g).filter(shown).forEach(h=>{rows+=todayHabitRowHTML(h,dStr,dis,true,isToday);});
     rows+=`</div>`;
   });
-  ungroupedHabits().forEach(h=>{
-    const due=dueOnDate(h,viewDate);
-    const anySet=h.situations.some(s=>getE(h.id,s.id,dStr)!==undefined);
-    if(!due&&!anySet)return;   // flexible Ziel (Woche/Monat), an dem Tag noch nicht angefasst
-    h.situations.forEach(s=>{
-      const v=getE(h.id,s.id,dStr);
-      rows+=`<button class="trow" ${dis} onclick="openDay('${h.id}','${dStr}')">
-        <div class="ico-tile">${svgIcon(h.icon)}</div>
-        <div class="tname"><div class="n">${esc(h.name)}</div>${h.situations.length>1?`<div class="sit">${esc(s.name)}</div>`:''}</div>
-        <div class="tstatus ${v||''}"></div>
-      </button>`;
-    });
-  });
+  ungroupedHabits().filter(shown).forEach(h=>{rows+=todayHabitRowHTML(h,dStr,dis,false,isToday);});
   if(!rows)return `<div class="tlist"><div class="tempty">Für diesen Tag ist nichts geplant.</div></div>`;
   return `<div class="tlist">${rows}</div>`;
 }
@@ -879,13 +1153,15 @@ function habitRowHTML(h,mon,tStr,now,sub){
     cells+=`<button class="mcell ${isToday?'today':''} ${isFuture?'future':''} ${offsched?'offsched':''}"
       ${isFuture?'disabled':''} onclick="openDay('${h.id}','${date}')" aria-label="${esc(h.name)} ${d.getDate()}.">${segs}</button>`;
   }
+  const ms=habitStatus(h);const sOn=chipData(h).on;
+  const warn=weekOffset===0&&streak(h)>0&&streakAtRisk(h);
   return `<div class="mgrid mrow ${sub?'sub':''}">
     <div></div>
     <button class="mname" onclick="openHabitEditor('${h.id}')" aria-label="${esc(h.name)} bearbeiten">
-      <div class="ico-tile">${svgIcon(h.icon)}</div><span>${esc(h.name)}</span>
+      <div class="ico-tile ${ms?'ms-'+ms:''}">${svgIcon(h.icon)}</div><span>${esc(h.name)}</span>
     </button>
     ${cells}
-    <div class="mstreak">${matrixStreakText(h)}</div>
+    <div class="mstreak ${sOn?'on':''} ${warn?'warn':''}">${h.schedule==='weekly'||h.schedule==='monthly'?'':`<svg viewBox="0 0 24 24">${CHIPICON.flame}</svg>`}${matrixStreakText(h)}</div>
   </div>`;
 }
 
@@ -914,7 +1190,6 @@ function groupRowHTML(g,mon,tStr,now){
     cells+=`<button class="mcell ${isToday?'today':''} ${isFuture?'future':''}"
       ${isFuture?'disabled':''} onclick="openGroupDay('${g.id}','${date}')" aria-label="${esc(g.name)} ${d.getDate()}.">${segs}</button>`;
   }
-  const {due,done}=groupDayCounts(g,tStr);
   let out=`<div class="mgrid mrow">
     <button onclick="toggleGroup('${g.id}')" aria-label="${g.collapsed?'Gruppe aufklappen':'Gruppe zuklappen'}"
       style="width:16px;height:16px;display:flex;align-items:center;justify-content:center">
@@ -924,7 +1199,7 @@ function groupRowHTML(g,mon,tStr,now){
       <div class="ico-tile">${svgIcon(g.icon)}</div><span>${esc(g.name)}</span>
     </button>
     ${cells}
-    <div class="mstreak">${due?done+'/'+due:'–'}</div>
+    <div></div>
   </div>`;
   if(!g.collapsed)hs.forEach(h=>{out+=habitRowHTML(h,mon,tStr,now,true);});
   return out;
@@ -998,7 +1273,7 @@ function openGroupEditor(gid){
 function renderGroupEditor(){
   const d=gDraft;
   const icons=ICON_KEYS.map(k=>`<button class="${d.icon===k?'sel':''}" onclick="gDraft.icon='${k}';renderGroupEditor()">${svgIcon(k)}</button>`).join('');
-  const list=S.habits.length?S.habits.map(h=>{
+  const list=activeHabits().length?activeHabits().map(h=>{
     const on=d.habitIds.includes(h.id);
     const other=S.groups.find(x=>x.id!==d.id&&x.habitIds.includes(h.id));
     return `<button class="pick-row ${on?'sel':''}" onclick="toggleMember('${h.id}')">
@@ -1097,7 +1372,8 @@ function openHabitEditor(hid){
   const h=hid?S.habits.find(x=>x.id===hid):null;
   draft=h?JSON.parse(JSON.stringify(h)):{id:null,name:'',icon:'leaf',schedule:'daily',interval:2,weekdays:[0,1,2,3,4],
     weeklyTarget:3,monthlyTarget:8,startDate:todayStr(),goalEnabled:false,goalN:30,celebrated:false,
-    situations:[{id:uid(),name:'Standard'}],reminders:{enabled:false,times:[]}};
+    situations:[{id:uid(),name:'Standard'}],reminders:{enabled:false,times:[]},
+    note:'',archived:false,archivedAt:null,milestones:{stable:false,archive:false}};
   document.getElementById('sheetTitle').textContent=h?'Bearbeiten':'Neue Gewohnheit';
   renderEditor();showSheet();
 }
@@ -1138,11 +1414,31 @@ function renderEditor(){
       <button onclick="draft.goalN=Math.max(1,draft.goalN-1);renderEditor()">−</button>
       <div class="val">${d.goalN}</div><div class="unit">${gUnit}</div>
       <button style="margin-left:auto" onclick="draft.goalN=draft.goalN+1;renderEditor()">+</button></div>
-    <div class="hint" style="margin-top:8px">🎉 Du wirst benachrichtigt, sobald du das erreichst – danach läuft der Habit normal weiter.</div>`:'';
+    <div class="hint" style="margin-top:8px">🎉 Du bekommst eine kleine Feier, sobald du das erreichst – danach läuft der Habit normal weiter. Einmal Auslassen ist okay, erst zweimal hintereinander setzt die Serie zurück.</div>`:'';
+
+  // --- Meilensteine (automatisch, nur Anzeige) ---
+  let msBox='';
+  if(d.id){
+    const st=stableInfo(d),ar=archiveInfo(d);
+    const unitW=d.schedule==='weekly'?'Wochen':d.schedule==='monthly'?'Monate':'Tage';
+    msBox=`<div class="esec">Meilensteine<span class="opt"> · automatisch</span></div>
+    <div class="field"><div class="ms-box">
+      <div class="ms-row"><div class="ms-top"><b>Stabil</b>${st.met?'<span class="ok">✓ erreicht</span>':'<span class="no">noch nicht</span>'}</div>
+        <div class="gb-track"><i style="width:${Math.min(100,st.days/st.minDays*100)}%"></i></div>
+        <div class="ms-line"><span>Tage dabei (mind. ${st.minDays})</span><span class="${st.days>=st.minDays?'y':''}">${st.days}</span></div>
+        <div class="ms-line"><span>Letzte ${st.window} Tage ohne Aussetzer</span><span class="${st.clean?'y':''}">${st.clean?'ja':'nein'}</span></div></div>
+      <div class="ms-row"><div class="ms-top"><b>Archiv-reif</b>${ar.met?'<span class="ok">✓ erreicht</span>':'<span class="no">noch nicht</span>'}</div>
+        <div class="gb-track"><i style="width:${Math.min(100,ar.days/ar.minDays*100)}%"></i></div>
+        <div class="ms-line"><span>Tage dabei (mind. ${ar.minDays})</span><span class="${ar.days>=ar.minDays?'y':''}">${ar.days}</span></div>
+        <div class="ms-line"><span>Quote letzte ${ar.window} Tage (mind. ${ar.pct} %)${unitW!=='Tage'?' – in '+unitW:''}</span><span class="${ar.rate>=ar.pct?'y':''}">${ar.rate} %</span></div></div>
+    </div><div class="hint">Stabil → Zeit für eine neue Gewohnheit. Archiv-reif → sie läuft von allein. Die Schwellen änderst du in den Einstellungen.</div></div>`;
+  }
 
   document.getElementById('sheetBody').innerHTML=`
     <div class="field"><label>Name</label>
       <input class="inp" value="${esc(d.name)}" placeholder="z. B. Meditieren" oninput="draft.name=this.value"></div>
+    <div class="field"><label>Notiz</label>
+      <textarea class="inp" rows="3" placeholder="Warum, wann, wo – alles, was dir hilft" oninput="draft.note=this.value">${esc(d.note)}</textarea></div>
     <div class="field"><label>Symbol</label><div class="icon-pick">${icons}</div></div>
 
     <div class="esec">Rhythmus</div>
@@ -1162,9 +1458,10 @@ function renderEditor(){
       ${sits}
       <button class="add-inline" onclick="draft.situations.push({id:uid(),name:''});renderEditor()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Situation hinzufügen</button></div>
 
-    <div class="esec">Endziel<span class="opt"> · optional</span></div>
+    ${msBox}
+    <div class="esec">Eigenes Ziel<span class="opt"> · optional</span></div>
     <div class="field">
-      <div class="hint" style="margin:-2px 0 10px">Der Meilenstein, ab dem die Gewohnheit „sitzt" – z. B. 30 Tage am Stück oder 4 Wochen in Folge.</div>
+      <div class="hint" style="margin:-2px 0 10px">Eine eigene Challenge, z. B. „30 Tage am Stück" oder „4 Wochen in Folge".</div>
       <div class="seg-toggle">
         <button class="${!d.goalEnabled?'sel':''}" onclick="draft.goalEnabled=false;renderEditor()">Kein festes Ziel</button>
         <button class="${d.goalEnabled?'sel':''}" onclick="draft.goalEnabled=true;renderEditor()">Ziel setzen</button>
@@ -1172,7 +1469,8 @@ function renderEditor(){
     </div>
 
     <button class="primary" onclick="saveHabit()">${d.id?'Speichern':'Gewohnheit anlegen'}</button>
-    ${d.id?`<button class="danger-btn" onclick="deleteHabit()">Gewohnheit löschen</button>`:''}`;
+    ${d.id?`<button class="ghost-btn" onclick="archiveHabit('${d.id}')">Archivieren</button>
+      <button class="danger-btn" onclick="deleteHabit()">Gewohnheit löschen</button>`:''}`;
 }
 function setSchedule(v){draft.schedule=v;
   if(v==='weekdays'&&!draft.weekdays.length)draft.weekdays=[0,1,2,3,4];
@@ -1189,48 +1487,240 @@ function saveHabit(){
   if(!isNew){const idx=S.habits.findIndex(x=>x.id===d.id);S.habits[idx]=d;}
   else{d.id=uid();S.habits.push(d);}
   d.celebrated=goalMet(d);   // avoid re-celebrating an already-met goal on the next check
-  save();hideSheet();renderTrack();scheduleNotifs();toast(isNew?'Angelegt':'Gespeichert');
+  save();hideSheet();renderTrack();toast(isNew?'Angelegt':'Gespeichert');
 }
-function deleteHabit(){if(!confirm('Diese Gewohnheit und alle Einträge löschen?'))return;
-  S.habits=S.habits.filter(x=>x.id!==draft.id);delete S.entries[draft.id];
-  S.groups.forEach(g=>{g.habitIds=g.habitIds.filter(id=>id!==draft.id);});
-  save();hideSheet();renderTrack();scheduleNotifs();toast('Gelöscht');}
+function deleteHabit(){deleteHabitById(draft.id);}
+function deleteHabitById(id){if(!confirm('Diese Gewohnheit und alle Einträge endgültig löschen?'))return;
+  S.habits=S.habits.filter(x=>x.id!==id);delete S.entries[id];
+  S.groups.forEach(g=>{g.habitIds=g.habitIds.filter(x=>x!==id);});
+  save();hideSheet();renderTrack();if(activeView()==='ideas')renderIdeas();toast('Gelöscht');}
 
-/* ---------- IDEAS ---------- */
+/* ---------- GEWOHNHEITEN-Tab: Ideen | Archiv | Wissen ---------- */
+let ideasView='ideas';
+const PRIOS=[['high','Hoch'],['mid','Mittel'],['later','Irgendwann']];
+const HANDLE_ICON='<svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
+function setIdeasView(v){if(ideasView===v)return;ideasView=v;renderIdeas();
+  document.getElementById('viewSub').textContent=titles.ideas[1]();}
 function renderIdeas(){
   const el=V.ideas;
-  const list=S.ideas.map(i=>`<div class="idea-card">
-    <div class="itext">${esc(i.text)}</div>
-    <div class="iact">
-      <button class="conv" title="Als Gewohnheit anlegen" onclick="convertIdea('${i.id}')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
-      <button class="rm" title="Löschen" onclick="delIdea('${i.id}')"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m2 0v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7"/></svg></button>
-    </div></div>`).join('');
-  el.innerHTML=`
-    <div class="idea-add">
-      <input id="ideaInput" class="inp" placeholder="Neue Idee für später …" onkeydown="if(event.key==='Enter')addIdea()">
-      <button class="idea-addbtn" onclick="addIdea()">+</button></div>
-    ${S.ideas.length?list:`<div class="empty" style="padding:44px 24px"><div class="ico">${svgIcon('bulb')}</div>
-      <h2>Ideen-Sammlung</h2><p>Notiere Gewohnheiten, die du später ausprobieren willst. Über&nbsp;＋ machst du aus einer Idee direkt eine Gewohnheit.</p></div>`}`;
+  let html=`<div class="seg-toggle view-toggle">
+    <button class="${ideasView==='ideas'?'sel':''}" onclick="setIdeasView('ideas')">Ideen</button>
+    <button class="${ideasView==='archive'?'sel':''}" onclick="setIdeasView('archive')">Archiv</button>
+    <button class="${ideasView==='know'?'sel':''}" onclick="setIdeasView('know')">Wissen</button>
+  </div>`;
+  if(ideasView==='archive')html+=archiveHTML();
+  else if(ideasView==='know')html+=KNOW_HTML;
+  else html+=ideasHTML();
+  el.innerHTML=html;
 }
+function ideasHTML(){
+  let html=`<div class="idea-add">
+      <input id="ideaInput" class="inp" placeholder="Neue Idee für später …" onkeydown="if(event.key==='Enter')addIdea()">
+      <button class="idea-addbtn" onclick="addIdea()">+</button></div>`;
+  if(!S.ideas.length)return html+`<div class="empty" style="padding:44px 24px"><div class="ico">${svgIcon('bulb')}</div>
+      <h2>Ideen-Sammlung</h2><p>Parke hier Gewohnheiten für später. Sobald eine aktuelle Gewohnheit <b>stabil</b> ist, holst du dir die oberste Idee.</p></div>`;
+  PRIOS.forEach(([k,label])=>{
+    const items=S.ideas.filter(i=>i.prio===k);const col=!!S.settings.ideaCollapsed[k];
+    html+=`<div class="isec" data-prio="${k}">
+      <button class="isec-head" onclick="toggleIdeaSec('${k}')">
+        <svg class="mchev ${col?'':'open'}" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        <span class="t">${label}</span><span class="c">${items.length}</span></button>
+      <div class="ilist" data-prio="${k}" ${col?'hidden':''}>${items.map(i=>`<div class="idea-card" data-id="${i.id}" onclick="openIdeaEditor('${i.id}')">
+          <div class="itext">${esc(i.text)}${i.note&&i.note.trim()?`<div class="inote">${esc(i.note)}</div>`:''}</div>
+          <div class="ihandle" onpointerdown="ideaDragStart(event)" onclick="event.stopPropagation()" aria-label="Verschieben">${HANDLE_ICON}</div>
+        </div>`).join('')||`<div class="idrop">Hierher ziehen</div>`}</div></div>`;
+  });
+  return html;
+}
+function toggleIdeaSec(k){S.settings.ideaCollapsed[k]=!S.settings.ideaCollapsed[k];save();renderIdeas();}
 function addIdea(){const inp=document.getElementById('ideaInput');if(!inp)return;const t=inp.value.trim();if(!t)return;
-  S.ideas.unshift({id:uid(),text:t});save();renderIdeas();}
-function delIdea(id){S.ideas=S.ideas.filter(i=>i.id!==id);save();renderIdeas();}
+  const at=S.ideas.findIndex(i=>i.prio==='mid');const idea={id:uid(),text:t,note:'',prio:'mid'};
+  if(at<0)S.ideas.push(idea);else S.ideas.splice(at,0,idea);
+  S.settings.ideaCollapsed.mid=false;save();renderIdeas();
+  const n=document.getElementById('ideaInput');if(n)n.focus();}
+function delIdea(id){if(!confirm('Idee löschen?'))return;S.ideas=S.ideas.filter(i=>i.id!==id);save();hideSheet();renderIdeas();}
 function convertIdea(id){const idea=S.ideas.find(i=>i.id===id);if(!idea)return;
-  openHabitEditor();draft.name=idea.text;draft._fromIdea=id;renderEditor();}
+  openHabitEditor();draft.name=idea.text;draft.note=idea.note||'';draft._fromIdea=id;renderEditor();}
+
+/* Idee bearbeiten */
+let iDraft=null;
+function openIdeaEditor(id){const i=S.ideas.find(x=>x.id===id);if(!i)return;
+  iDraft=JSON.parse(JSON.stringify(i));document.getElementById('sheetTitle').textContent='Idee';
+  renderIdeaEditor();showSheet();}
+function renderIdeaEditor(){const d=iDraft;
+  document.getElementById('sheetBody').innerHTML=`
+    <div class="field"><label>Idee</label>
+      <textarea class="inp" rows="2" style="min-height:52px" oninput="iDraft.text=this.value">${esc(d.text)}</textarea></div>
+    <div class="field"><label>Notiz</label>
+      <textarea class="inp" rows="4" placeholder="Wie könnte das konkret aussehen? Wann, wo, nach welcher Gewohnheit?" oninput="iDraft.note=this.value">${esc(d.note)}</textarea></div>
+    <div class="field"><label>Wichtigkeit</label><div class="seg-toggle">
+      ${PRIOS.map(([k,l])=>`<button class="${d.prio===k?'sel':''}" onclick="iDraft.prio='${k}';renderIdeaEditor()">${l}</button>`).join('')}</div></div>
+    <button class="primary" onclick="saveIdea()">Speichern</button>
+    <button class="ghost-btn" onclick="if(saveIdea(true))convertIdea('${d.id}')">Als Gewohnheit anlegen</button>
+    <button class="danger-btn" onclick="delIdea('${d.id}')">Idee löschen</button>`;}
+function saveIdea(silent){const d=iDraft;if(!d.text.trim()){toast('Bitte einen Text eingeben');return false;}
+  const idx=S.ideas.findIndex(x=>x.id===d.id);if(idx<0)return false;
+  const old=S.ideas[idx];
+  if(old.prio!==d.prio){S.ideas.splice(idx,1);   // bei neuer Wichtigkeit ans Ende des Abschnitts
+    let at=-1;S.ideas.forEach((x,j)=>{if(x.prio===d.prio)at=j;});
+    S.ideas.splice(at<0?S.ideas.length:at+1,0,d);}
+  else S.ideas[idx]=d;
+  save();if(!silent){hideSheet();toast('Gespeichert');}renderIdeas();return true;}
+
+/* Sortieren per Ziehen am Griff (Pointer-Events: Touch + Maus), auch zwischen Abschnitten */
+let drag=null;
+function ideaDragStart(e){
+  const card=e.target.closest('.idea-card');if(!card)return;
+  e.preventDefault();e.stopPropagation();
+  if(drag)ideaDragEnd();
+  card.classList.add('dragging');
+  drag={card};
+  // auf window lauschen: das Loslassen kommt auch an, wenn der Finger den Griff verlassen hat
+  addEventListener('pointermove',ideaDragMove,{passive:false});
+  addEventListener('pointerup',ideaDragEnd);addEventListener('pointercancel',ideaDragEnd);
+}
+function ideaDragMove(e){
+  if(!drag)return;e.preventDefault();const y=e.clientY;
+  // Zielabschnitt: der, dessen Bereich (Kopf + Liste) die Fingerposition enthaelt
+  const secs=[...document.querySelectorAll('#view-ideas .isec')];
+  let sec=secs.find(sc=>{const r=sc.getBoundingClientRect();return y>=r.top&&y<=r.bottom;});
+  if(!sec)sec=y<secs[0].getBoundingClientRect().top?secs[0]:secs[secs.length-1];
+  const list=sec.querySelector('.ilist');
+  if(list.hidden){list.hidden=false;S.settings.ideaCollapsed[sec.dataset.prio]=false;
+    const ch=sec.querySelector('.mchev');if(ch)ch.classList.add('open');}
+  const ph=list.querySelector('.idrop');if(ph)ph.remove();
+  const others=[...list.querySelectorAll('.idea-card')].filter(c=>c!==drag.card);
+  const before=others.find(c=>{const r=c.getBoundingClientRect();return y<r.top+r.height/2;});
+  if(before){if(before.previousElementSibling!==drag.card)list.insertBefore(drag.card,before);}
+  else if(list.lastElementChild!==drag.card)list.appendChild(drag.card);
+  // am Rand mitscrollen
+  const sc=document.querySelector('.scroll');
+  if(y<90)sc.scrollTop-=10;else if(y>innerHeight-140)sc.scrollTop+=10;
+}
+function ideaDragEnd(){
+  if(!drag)return;const {card}=drag;
+  removeEventListener('pointermove',ideaDragMove);
+  removeEventListener('pointerup',ideaDragEnd);removeEventListener('pointercancel',ideaDragEnd);
+  card.classList.remove('dragging');
+  // neue Reihenfolge + Wichtigkeit direkt aus dem DOM uebernehmen
+  const byId=Object.fromEntries(S.ideas.map(i=>[i.id,i]));const next=[];
+  document.querySelectorAll('#view-ideas .ilist').forEach(l=>{
+    l.querySelectorAll('.idea-card').forEach(c=>{const i=byId[c.dataset.id];if(i){i.prio=l.dataset.prio;next.push(i);}});});
+  if(next.length===S.ideas.length)S.ideas=next;
+  drag=null;save();renderIdeas();
+}
+
+/* Archiv */
+function fmtShort(d){return d.toLocaleDateString('de-DE',{day:'numeric',month:'short'});}
+function lifeRate(h){let g=0,r=0;const start=habitStart(h);const end=h.archivedAt?parse(h.archivedAt):today();
+  for(let d=new Date(start);d<=end;d=addDays(d,1)){if(!isSchedDay(h,d))continue;const st=dayFull(h,ds(d));
+    if(st==='g')g++;else if(st!=='o'&&ds(d)!==todayStr())r++;}
+  return (g+r)?Math.round(g/(g+r)*100):0;}
+function archDays(h){const end=h.archivedAt?parse(h.archivedAt):today();
+  return Math.max(1,Math.round((new Date(end.getFullYear(),end.getMonth(),end.getDate())-habitStart(h))/86400000)+1);}
+function archiveHTML(){
+  const list=S.habits.filter(h=>h.archived).sort((a,b)=>(b.archivedAt||'').localeCompare(a.archivedAt||''));
+  if(!list.length)return `<div class="empty" style="padding:44px 24px"><div class="ico">${svgIcon('star')}</div>
+    <h2>Dein Archiv</h2><p>Hier landen Gewohnheiten, die du geschafft hast – deine Beweise dafür, wer du geworden bist.</p></div>`;
+  return `<div class="section-label" style="margin-top:4px">${list.length} ${list.length===1?'Gewohnheit':'Gewohnheiten'} geschafft</div>`+
+    list.map(h=>`<button class="arch-card" onclick="openArchived('${h.id}')">
+      <div class="ico-tile">${svgIcon(h.icon)}</div>
+      <div class="ab"><div class="an">${esc(h.name)}</div>
+        <div class="ad">${fmtShort(habitStart(h))} – ${fmtShort(parse(h.archivedAt||todayStr()))} · ${archDays(h)} Tage</div></div>
+      <div class="ap">${lifeRate(h)}%</div></button>`).join('');
+}
+function openArchived(hid){const h=S.habits.find(x=>x.id===hid);if(!h)return;
+  document.getElementById('sheetTitle').textContent=h.name;
+  document.getElementById('sheetBody').innerHTML=`
+    <div class="de-date" style="text-transform:none">Archiviert am ${fmtLong(parse(h.archivedAt||todayStr()))}</div>
+    <div class="arch-sum"><div><b>${archDays(h)}</b><span>Tage dabei</span></div>
+      <div><b>${lifeRate(h)}%</b><span>Erfolgsquote</span></div></div>
+    ${h.note&&h.note.trim()?`<div class="field"><label>Notiz</label><div class="note-box">${esc(h.note)}</div></div>`:''}
+    ${renderYear(h)}
+    <button class="primary" onclick="unarchiveHabit('${h.id}')">Wieder aktivieren</button>
+    <button class="danger-btn" onclick="deleteHabitById('${h.id}')">Endgültig löschen</button>`;
+  showSheet();}
+
+/* Wissen: die Kernideen aus "Die 1%-Methode" (James Clear), in eigenen Worten zusammengefasst */
+function kcard(icon,title,sub,body,open){return `<details class="kcard"${open?' open':''}><summary><div class="ico-tile">${svgIcon(icon)}</div>
+  <div class="kt"><b>${title}</b><span>${sub}</span></div><svg class="mchev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></summary>
+  <div class="kbody">${body}</div></details>`;}
+const KNOW_HTML=
+kcard('bulb','Es hakt – was tun?','Schnelle Diagnose, wenn eine Gewohnheit nicht klappt',`
+  <p>Nicht alles auf einmal optimieren. Nur wenn etwas nicht läuft, frag dich, <b>woran</b> es liegt, und dreh an genau einer Schraube:</p>
+  <div class="law"><b>Ich vergesse es → sichtbarer machen</b>An etwas Bestehendes koppeln („Nach dem Zähneputzen …"), Auslöser in Sichtweite legen, feste Zeit und festen Ort bestimmen.</div>
+  <div class="law"><b>Ich hab keine Lust → attraktiver machen</b>Mit etwas koppeln, das du magst (Podcast nur beim Aufräumen), dir vorher sagen, was du davon hast.</div>
+  <div class="law"><b>Es ist mir zu viel → kleiner machen</b>Auf eine 2-Minuten-Version schrumpfen, Hürden vorher wegräumen, Dinge schon am Vorabend vorbereiten.</div>
+  <div class="law"><b>Es fühlt sich nach nichts an → belohnen</b>Sofort abhaken, den Streak wachsen sehen, eine kleine Belohnung direkt danach.</div>
+  <div class="law"><b>Ich hab's verpasst → nie zweimal</b>Einmal auslassen ist normal. Wichtig ist nur, direkt am nächsten Tag weiterzumachen.</div>`,true)+
+kcard('sprout','Die Kernidee','Kleine Schritte, großer Zinseszins',`
+  <p><b>1 % besser pro Tag</b> fühlt sich nach nichts an, summiert sich über ein Jahr aber gewaltig. Genauso wirken kleine schlechte Gewohnheiten, nur in die andere Richtung.</p>
+  <p><b>Systeme statt Ziele.</b> Ziele sagen dir, wo du hinwillst. Dein System, also das, was du täglich tust, entscheidet, ob du ankommst. Verbessere das System, dann kommen die Ergebnisse von selbst.</p>
+  <p><b>Das Tal der Enttäuschung.</b> Am Anfang siehst du kaum Ergebnisse, weil die Wirkung verzögert kommt. Das ist normal und kein Zeichen, dass es nicht funktioniert. Einfach dranbleiben.</p>`)+
+kcard('heart','Identität','Werde, wer du sein willst',`
+  <p>Die nachhaltigste Veränderung setzt nicht beim Ergebnis an („ich will aufgeräumt wohnen"), sondern bei der <b>Identität</b> („ich bin jemand, der Dinge direkt erledigt").</p>
+  <p>Jede Wiederholung ist eine <b>Stimme</b> für diese Identität. Du brauchst keine perfekte Bilanz, nur eine Mehrheit der Stimmen.</p>
+  <h4>Zwei Schritte</h4><ul><li>Entscheide, wer du sein willst.</li><li>Beweise es dir mit kleinen Erfolgen, jeden Tag.</li></ul>
+  <p>Deine zwei Identitäten: <b>„Ich erledige Dinge direkt"</b> und <b>„Mein Handy bestimmt nicht meinen Tag"</b>.</p>`)+
+kcard('target','Die Gewohnheits-Schleife','Auslöser → Verlangen → Handlung → Belohnung',`
+  <p>Jede Gewohnheit läuft in vier Schritten ab: Ein <b>Auslöser</b> fällt dir auf, du bekommst ein <b>Verlangen</b>, du führst die <b>Handlung</b> aus und bekommst eine <b>Belohnung</b>, die das Ganze festigt.</p>
+  <p>Daraus ergeben sich die vier Gesetze: Mach den Auslöser <b>offensichtlich</b>, das Verlangen <b>attraktiv</b>, die Handlung <b>einfach</b> und die Belohnung <b>befriedigend</b>. Zum Abgewöhnen drehst du jedes Gesetz um.</p>`)+
+kcard('check','Gute Gewohnheiten aufbauen','Die 4 Gesetze mit Techniken',`
+  <h4>1 · Offensichtlich machen</h4><ul>
+    <li><b>Bestandsaufnahme:</b> Schreib auf, was du tagsüber automatisch tust, und bewerte es mit + / − / =.</li>
+    <li><b>Konkreter Plan:</b> „Ich mache [X] um [Uhrzeit] in/an [Ort]."</li>
+    <li><b>Gewohnheiten stapeln:</b> „Nach [bestehende Gewohnheit] mache ich [neue Gewohnheit]."</li>
+    <li><b>Umgebung gestalten:</b> Auslöser für Gutes sichtbar hinlegen, z. B. Buch aufs Kissen.</li></ul>
+  <h4>2 · Attraktiv machen</h4><ul>
+    <li><b>Kopplung:</b> Etwas, das du tun <i>willst</i>, nur zusammen mit dem, was du tun <i>solltest</i>.</li>
+    <li><b>Umfeld:</b> Such dir Leute, bei denen dein Wunschverhalten normal ist.</li>
+    <li><b>Ritual davor:</b> Eine kleine Sache, die du gern machst, direkt vor der schweren.</li></ul>
+  <h4>3 · Einfach machen</h4><ul>
+    <li><b>Reibung senken:</b> Je weniger Schritte zwischen dir und dem Tun, desto besser.</li>
+    <li><b>Umgebung vorbereiten:</b> Alles für den nächsten Einsatz schon bereitlegen.</li>
+    <li><b>2-Minuten-Regel:</b> Eine neue Gewohnheit startet mit einer Version, die unter 2 Minuten dauert. Erst die Gewohnheit etablieren, dann ausbauen.</li>
+    <li><b>Automatisieren:</b> Einmal entscheiden, was dann dauerhaft wirkt (Einstellungen, Apps, Anschaffungen).</li></ul>
+  <h4>4 · Befriedigend machen</h4><ul>
+    <li><b>Sofort belohnen:</b> Direkt nach der Gewohnheit etwas Kleines, Angenehmes.</li>
+    <li><b>Tracken:</b> Abhaken fühlt sich gut an und zeigt dir deinen Fortschritt.</li>
+    <li><b>Nie zweimal auslassen:</b> Ein Ausrutscher ist egal, das Muster zählt.</li></ul>`)+
+kcard('smokefree','Schlechte Gewohnheiten ablegen','Die 4 Gesetze umgedreht',`
+  <h4>1 · Unsichtbar machen</h4><ul>
+    <li><b>Auslöser entfernen:</b> Handy in einen anderen Raum, Apps vom Homescreen.</li></ul>
+  <h4>2 · Unattraktiv machen</h4><ul>
+    <li><b>Umdeuten:</b> Mach dir die Nachteile konkret bewusst und was du stattdessen gewinnst.</li></ul>
+  <h4>3 · Schwierig machen</h4><ul>
+    <li><b>Reibung erhöhen:</b> Mehr Schritte zwischen dir und der schlechten Gewohnheit (abmelden, Blocker, wegräumen).</li>
+    <li><b>Selbstverpflichtung:</b> Heute eine Entscheidung treffen, die dich morgen festlegt, z. B. ein Blocker mit Zeitsperre.</li></ul>
+  <h4>4 · Unbefriedigend machen</h4><ul>
+    <li><b>Jemand schaut zu:</b> Ein Partner, dem du Rechenschaft schuldest.</li>
+    <li><b>Eine Abmachung:</b> Klare, spürbare Konsequenz bei einem Rückfall.</li></ul>`)+
+kcard('mountain','Dranbleiben','Wenn die Motivation nachlässt',`
+  <ul><li><b>Die richtige Schwierigkeit:</b> Am motiviertesten bist du bei Aufgaben knapp an deiner Grenze, nicht zu leicht und nicht zu schwer.</li>
+  <li><b>Langeweile ist der Gegner:</b> Profis ziehen es auch an Tagen durch, an denen es sich langweilig anfühlt.</li>
+  <li><b>Gewohnheit + bewusstes Üben:</b> Ist etwas automatisch, überprüfe ab und zu, ob du dich noch verbesserst.</li>
+  <li><b>Identität locker halten:</b> Definiere dich nicht über eine einzelne Rolle, sonst wirft dich jede Veränderung aus der Bahn.</li></ul>`)+
+kcard('star','Die Regeln dieser App','So benutzt du Cadence',`
+  <ul><li><b>Wenige gleichzeitig:</b> Lieber 5 Gewohnheiten, die sitzen, als 15 halbe.</li>
+  <li><b>Nie zweimal:</b> Einmal verpasst hält den Streak am Leben, zweimal in Folge setzt ihn zurück. Orange (entschuldigt) zählt nie als verpasst.</li>
+  <li><b>Stabil</b> (Standard: mind. 21 Tage dabei, letzte 14 Tage ohne Aussetzer) → hol dir die nächste Idee.</li>
+  <li><b>Archiv-reif</b> (Standard: mind. 60 Tage dabei, mind. 90 % in den letzten 30 Tagen) → ins Archiv, sie läuft von allein.</li>
+  <li><b>Ideen parken:</b> Neue Einfälle landen sofort in den Ideen. Das hält den Kopf frei.</li>
+  <li>Die Schwellen änderst du unter Einstellungen → Meilensteine.</li></ul>`);
 
 /* ---------- STATS ---------- */
 let statMonth=new Date(today().getFullYear(),today().getMonth(),1);
 let statFilter='all';
 function renderStats(){
   const el=V.stats;
-  if(S.habits.length===0){el.innerHTML=`<div class="empty"><div class="ico">${svgIcon('target')}</div>
+  if(activeHabits().length===0){el.innerHTML=`<div class="empty"><div class="ico">${svgIcon('target')}</div>
     <h2>Noch keine Daten</h2><p>Sobald du trackst, erscheint hier deine Übersicht.</p></div>`;return;}
-  const habits=statFilter==='all'?S.habits:S.habits.filter(h=>h.id===statFilter);
+  const habits=statFilter==='all'?activeHabits():activeHabits().filter(h=>h.id===statFilter);
   let g=0,o=0,r=0;const start=addDays(today(),-29);
   habits.forEach(h=>{for(let i=0;i<30;i++){const st=dayFull(h,ds(addDays(start,i)));if(st==='g')g++;else if(st==='o')o++;else if(st==='r')r++;}});
   const tot=g+o+r||1;const succ=(g+r)?Math.round(g/(g+r)*100):0;
   let chips=`<button class="chip ${statFilter==='all'?'sel':''}" onclick="statFilter='all';renderStats()">Alle</button>`;
-  S.habits.forEach(h=>{chips+=`<button class="chip ${statFilter===h.id?'sel':''}" onclick="statFilter='${h.id}';renderStats()">${svgIcon(h.icon)} ${esc(h.name)}</button>`;});
+  activeHabits().forEach(h=>{chips+=`<button class="chip ${statFilter===h.id?'sel':''}" onclick="statFilter='${h.id}';renderStats()">${svgIcon(h.icon)} ${esc(h.name)}</button>`;});
   let html=`<div class="filter-chips">${chips}</div>
     <div class="hero-stat"><div class="row">
       <div class="hs"><div class="n g">${succ}%</div><div class="l">Erfolgsquote</div></div>
@@ -1243,14 +1733,14 @@ function renderStats(){
         <div><span class="sw" style="background:linear-gradient(150deg,var(--r1),var(--r2))"></span>Nicht</div></div></div>`;
   html+=renderMonth(statFilter==='all'?null:S.habits.find(h=>h.id===statFilter));
   html+=`<div class="section-label">Jahr im Überblick</div>`;
-  (statFilter==='all'?S.habits:habits).forEach(h=>{html+=renderYear(h);});
+  (statFilter==='all'?activeHabits():habits).forEach(h=>{html+=renderYear(h);});
   el.innerHTML=html;
 }
 function monthAgg(habits,date){let anyR=false,anyG=false,anyO=false,any=false;
   habits.forEach(h=>{const st=dayFull(h,date);if(st){any=true;if(st==='r')anyR=true;else if(st==='g')anyG=true;else anyO=true;}});
   if(!any)return undefined;if(anyG)return 'g';if(anyR)return 'r';if(anyO)return 'o';}
 function renderMonth(calHabit){
-  const habits=calHabit?[calHabit]:S.habits;
+  const habits=calHabit?[calHabit]:activeHabits();
   const y=statMonth.getFullYear(),m=statMonth.getMonth();
   const first=new Date(y,m,1);const startBlank=wd(first);const days=new Date(y,m+1,0).getDate();
   const cur=new Date(today().getFullYear(),today().getMonth(),1);const tStr=todayStr();
@@ -1275,16 +1765,22 @@ function renderYear(h){
 }
 
 /* ---------- SETTINGS ---------- */
+const MS_FIELDS=[
+  ['stableMinDays','Stabil: dabei seit','Tage',7,120,1],
+  ['stableWindow','Stabil: ohne Aussetzer','letzte Tage',3,60,1],
+  ['archiveMinDays','Archiv-reif: dabei seit','Tage',14,365,5],
+  ['archiveWindow','Archiv-reif: Quote über','letzte Tage',7,120,1],
+  ['archivePct','Archiv-reif: Quote mind.','%',50,100,5]];
 function renderSettings(){
-  const el=V.settings;const st=S.settings;
+  const el=V.settings;const st=S.settings;const pu=st.push;
   const themeLabel={system:'System',light:'Hell',dark:'Dunkel'}[st.theme];
-  let habitRows=S.habits.map(h=>{const on=h.reminders.enabled&&h.reminders.times.length;
-    const desc=on?('Erinnerung · '+h.reminders.times.slice().sort().join(', ')):'Keine Erinnerung';
-    return `<div class="set-row tap" onclick="openReminders('${h.id}')">
-      <div class="si acc">${svgIcon(h.icon)}</div>
-      <div class="st"><div class="t">${esc(h.name)}</div><div class="d">${desc}</div></div>
-      <svg class="chev" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></div>`;}).join('');
-  if(!S.habits.length)habitRows=`<div class="set-row"><div class="st"><div class="d">Noch keine Gewohnheiten.</div></div></div>`;
+  const msRows=MS_FIELDS.map(([k,t,u,mn,mx,step])=>`<div class="set-row">
+      <div class="st"><div class="t">${t}</div><div class="d">${u}</div></div>
+      <div class="mini-step"><button onclick="stepMs('${k}',${-step},${mn},${mx})">−</button>
+        <div class="v">${st[k]}</div><button onclick="stepMs('${k}',${step},${mn},${mx})">+</button></div></div>`).join('');
+  const pushHint=!PUSH_URL?'Push-Server ist noch nicht eingerichtet.'
+    :!isStandalone()?'Funktioniert nur in der App vom Homescreen (iOS 16.4+).'
+    :pu.enabled?'Kommt jeden Tag zur eingestellten Uhrzeit.':'Eine Mitteilung pro Tag, auch wenn die App zu ist.';
   el.innerHTML=`
     <div class="section-label" style="margin-top:6px">Darstellung</div>
     <div class="set-group"><div class="set-row tap" onclick="cycleTheme()">
@@ -1292,18 +1788,22 @@ function renderSettings(){
       <div class="st"><div class="t">Design</div><div class="d">Hell, Dunkel oder automatisch</div></div>
       <div class="pill-val">${themeLabel}</div></div></div>
 
-    <div class="section-label">Erinnerungen</div>
+    <div class="section-label">Erinnerung</div>
     <div class="set-group">
-      <div class="set-row"><div class="si"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></div>
-        <div class="st"><div class="t">Benachrichtigungen</div><div class="d">Tägliche Erinnerung ans Tracken</div></div>
-        <div class="switch ${st.notif?'on':''}" onclick="toggleNotif(event)"></div></div>
-      ${st.notif?`<div class="set-row"><div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg></div>
-        <div class="st"><div class="t">Standard-Uhrzeit</div><div class="d">Vorschlag für neue Erinnerungen</div></div>
-        <input type="time" class="inp" value="${st.notifTime}" onchange="S.settings.notifTime=this.value;save();scheduleNotifs()"></div>`:''}
+      <div class="set-row"><div class="si acc"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></div>
+        <div class="st"><div class="t">Tägliche Erinnerung</div><div class="d">${pushHint}</div></div>
+        <div class="switch ${pu.enabled?'on':''}" onclick="togglePush()"></div></div>
+      <div class="set-row"><div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg></div>
+        <div class="st"><div class="t">Uhrzeit</div><div class="d">Wann soll sie kommen?</div></div>
+        <input type="time" class="inp" value="${pu.time}" onchange="setPushTime(this.value)"></div>
+      ${pu.enabled?`<div class="set-row tap" onclick="testPush()"><div class="si"><svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></div>
+        <div class="st"><div class="t">Test senden</div><div class="d">Kommt in ein paar Sekunden an</div></div></div>`:''}
     </div>
 
-    <div class="section-label">Erinnerung pro Gewohnheit</div>
-    <div class="set-group">${habitRows}</div>
+    <div class="section-label">Meilensteine</div>
+    <div class="set-group">${msRows}</div>
+    <div class="set-note">Gilt für alle Gewohnheiten. <b>Stabil</b> heißt: Zeit für eine neue Gewohnheit. <b>Archiv-reif</b> heißt: Sie läuft von allein.
+      <button class="add-inline" style="display:inline;padding:0;margin-left:4px" onclick="resetMs()">Standard wiederherstellen</button></div>
 
     <div class="section-label">Daten</div>
     <div class="set-group">
@@ -1314,57 +1814,57 @@ function renderSettings(){
     </div>
     <div style="text-align:center;color:var(--faint);font-size:12px;font-weight:600;margin:22px 0 8px">Cadence · alle Daten bleiben auf deinem Gerät</div>`;
 }
-function cycleTheme(){const o=['system','light','dark'];S.settings.theme=o[(o.indexOf(S.settings.theme)+1)%3];save();applyTheme();renderSettings();}
-function toggleNotif(e){e&&e.stopPropagation();
-  if(!S.settings.notif)requestNotif();else{S.settings.notif=false;save();renderSettings();scheduleNotifs();}}
+function cycleTheme(){const o=['system','light','dark'];S.settings.theme=o[(o.indexOf(S.settings.theme)+1)%3];save();applyTheme();
+  if(activeView()==='settings')renderSettings();}
+// Schwellen aendern; neu erreichte Meilensteine werden erst beim naechsten Tracken gefeiert
+function stepMs(k,d,mn,mx){S.settings[k]=Math.min(mx,Math.max(mn,S.settings[k]+d));save();renderSettings();}
+function resetMs(){Object.assign(S.settings,MS_DEFAULTS);save();renderSettings();toast('Standard wiederhergestellt');}
 
-/* per-habit reminder sheet */
-let remHid=null;
-function openReminders(hid){remHid=hid;const h=S.habits.find(x=>x.id===hid);
-  document.getElementById('sheetTitle').textContent='Erinnerung';renderRem(h);showSheet();}
-function renderRem(h){
-  const on=h.reminders.enabled;
-  const times=(h.reminders.times||[]).map((t,i)=>`<div class="rem-time">
-    <input type="time" class="inp" value="${t}" onchange="setRemTime(${i},this.value)">
-    <button class="del" onclick="delRemTime(${i})"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m2 0v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7"/></svg></button></div>`).join('');
-  document.getElementById('sheetBody').innerHTML=`
-    <div class="de-date">${esc(h.name)}</div>
-    <div class="set-group" style="margin-bottom:16px"><div class="set-row" style="border-radius:0">
-      <div class="si acc"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></div>
-      <div class="st"><div class="t">Erinnern</div><div class="d">Push zu den gewählten Zeiten</div></div>
-      <div class="switch ${on?'on':''}" onclick="toggleRem()"></div></div></div>
-    ${on?`<div class="field"><label>Uhrzeiten – mehrfach möglich</label>
-      ${times||`<div class="hint" style="margin-bottom:10px">Noch keine Zeit. Füge unten eine hinzu.</div>`}
-      <button class="add-inline" onclick="addRemTime()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Uhrzeit hinzufügen</button></div>`:''}
-    <button class="primary" onclick="hideSheet()">Fertig</button>`;
+/* ---------- Taegliche Push-Erinnerung (Cloudflare Worker, siehe push-worker/) ---------- */
+const PUSH_URL='https://cadence-push.timborelloeggers.workers.dev';        // Worker-Adresse, z. B. https://cadence-push.<name>.workers.dev
+const VAPID_PUBLIC='BF1gxpC5xCgus-L5z7ssTgds6Iz5z4ySpZHWJjvgsNO1qxgVg-rWHHlomRcLgym_YsS0sDK1u6PwD_UpGA8KMws';    // oeffentlicher VAPID-Schluessel (base64url)
+function isStandalone(){return navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;}
+function b64uToBytes(s){s=s.replace(/-/g,'+').replace(/_/g,'/');const pad='='.repeat((4-s.length%4)%4);
+  const bin=atob(s+pad);return Uint8Array.from(bin,c=>c.charCodeAt(0));}
+function pushId(){if(!S.settings.push.id){S.settings.push.id=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(36).slice(2));save();}
+  return S.settings.push.id;}
+async function pushApi(path,body){
+  const r=await fetch(PUSH_URL.replace(/\/$/,'')+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!r.ok)throw new Error('HTTP '+r.status);return r;}
+function togglePush(){if(S.settings.push.enabled)disablePush();else enablePush();}
+async function enablePush(){
+  if(!PUSH_URL||!VAPID_PUBLIC){toast('Push-Server ist noch nicht eingerichtet');return;}
+  if(!('serviceWorker'in navigator)||!('PushManager'in window)||!('Notification'in window)||!isStandalone()){
+    toast('Nur in der App vom Homescreen möglich');return;}
+  // iOS: die Erlaubnis-Abfrage muss direkt aus dem Tippen kommen - daher als erstes
+  const perm=await Notification.requestPermission();
+  if(perm!=='granted'){toast('Mitteilungen sind nicht erlaubt');return;}
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64uToBytes(VAPID_PUBLIC)});
+    await pushApi('/subscribe',{id:pushId(),subscription:sub.toJSON(),time:S.settings.push.time,
+      tz:Intl.DateTimeFormat().resolvedOptions().timeZone});
+    S.settings.push.enabled=true;save();renderSettings();toast('Erinnerung aktiv – täglich um '+S.settings.push.time);
+  }catch(e){toast('Hat nicht geklappt – bitte später nochmal');}
 }
-function curRem(){return S.habits.find(x=>x.id===remHid);}
-function toggleRem(){const h=curRem();h.reminders.enabled=!h.reminders.enabled;
-  if(h.reminders.enabled){if(!h.reminders.times.length)h.reminders.times=[S.settings.notifTime];requestNotif(true);}
-  save();renderRem(h);renderSettings();scheduleNotifs();}
-function addRemTime(){const h=curRem();h.reminders.times.push(S.settings.notifTime);save();renderRem(h);renderSettings();scheduleNotifs();}
-function setRemTime(i,v){const h=curRem();h.reminders.times[i]=v;save();renderSettings();scheduleNotifs();}
-function delRemTime(i){const h=curRem();h.reminders.times.splice(i,1);save();renderRem(h);renderSettings();scheduleNotifs();}
+async function disablePush(){
+  S.settings.push.enabled=false;save();renderSettings();
+  try{await pushApi('/unsubscribe',{id:pushId()});
+    const reg=await navigator.serviceWorker.getRegistration();const sub=reg&&await reg.pushManager.getSubscription();
+    if(sub)await sub.unsubscribe();}catch(e){}
+  toast('Erinnerung aus');
+}
+async function setPushTime(v){
+  if(!v)return;S.settings.push.time=v;save();
+  if(!S.settings.push.enabled)return;
+  try{const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();
+    if(!sub)throw 0;
+    await pushApi('/subscribe',{id:pushId(),subscription:sub.toJSON(),time:v,tz:Intl.DateTimeFormat().resolvedOptions().timeZone});
+    toast('Erinnerung jetzt um '+v);}catch(e){toast('Uhrzeit konnte nicht übertragen werden');}
+}
+async function testPush(){try{await pushApi('/test',{id:pushId()});toast('Test ist unterwegs');}catch(e){toast('Test fehlgeschlagen');}}
 
-/* ---------- Notifications ---------- */
-function requestNotif(silent){
-  if(!('Notification'in window)){if(!silent)toast('Auf diesem Gerät nicht unterstützt');return;}
-  Notification.requestPermission().then(p=>{
-    if(p==='granted'){S.settings.notif=true;save();renderSettings();scheduleNotifs();if(!silent)toast('Erinnerungen aktiv');}
-    else{if(!silent)toast('Im Browser blockiert');renderSettings();}});
-}
-let notifTimers=[];
-function scheduleNotifs(){
-  notifTimers.forEach(clearTimeout);notifTimers=[];
-  if(!('Notification'in window)||Notification.permission!=='granted')return;
-  const plan=[];
-  if(S.settings.notif)plan.push({time:S.settings.notifTime,text:'Zeit fürs Tracken 🌱'});
-  S.habits.forEach(h=>{if(h.reminders.enabled)h.reminders.times.forEach(t=>plan.push({time:t,text:h.name+' – erledigt?'}));});
-  const now=new Date();
-  plan.forEach(p=>{const[hh,mm]=p.time.split(':').map(Number);const t=new Date();t.setHours(hh,mm,0,0);
-    if(t<=now)t.setDate(t.getDate()+1);const delay=t-now;
-    if(delay<86400000)notifTimers.push(setTimeout(()=>{try{new Notification('Cadence',{body:p.text});}catch(e){}scheduleNotifs();},delay));});
-}
 function exportData(){try{const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='cadence-backup.json';
   document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);toast('Exportiert');}catch(e){toast('Export hier nicht möglich')}}
@@ -1380,7 +1880,11 @@ document.getElementById('sheetClose').addEventListener('click',hideSheet);
 
 /* ---------- Nav ---------- */
 const titles={track:['Heute',()=>fmtLong(today())],stats:['Statistik',()=>'Deine Fortschritte'],
-  ideas:['Ideen',()=>'Für später'],settings:['Einstellungen',()=>'App & Erinnerungen']};
+  ideas:['Gewohnheiten',()=>({ideas:'Ideen für später',archive:'Was du geschafft hast',know:'Aus „Die 1%-Methode"'})[ideasView]],
+  settings:['Einstellungen',()=>'App & Erinnerung']};
+function activeView(){const a=document.querySelector('.nav-item.active');return a?a.dataset.view:'track';}
+function openIdeasTab(){ideasView='ideas';const b=document.querySelector('.nav-item[data-view="ideas"]');
+  if(activeView()==='ideas')renderIdeas();else b.click();}
 function staggerIn(v){const el=V[v];el.classList.remove('stagger');void el.offsetWidth;el.classList.add('stagger');
   clearTimeout(staggerIn._t);staggerIn._t=setTimeout(()=>el.classList.remove('stagger'),800);}
 document.querySelectorAll('.nav-item').forEach(b=>{b.addEventListener('click',()=>{
@@ -1409,7 +1913,7 @@ function toast(msg,big){toastEl.textContent=msg;toastEl.className='toast show'+(
 
 /* ---------- Init ---------- */
 function renderAll(){renderTrack();document.getElementById('viewSub').textContent=titles.track[1]();}
-applyTheme();renderAll();scheduleNotifs();staggerIn('track');
+applyTheme();renderAll();staggerIn('track');
 setInterval(()=>{const t=todayStr();if(t!==renderAll._d){renderAll._d=t;if(document.querySelector('.nav-item.active').dataset.view==='track')renderTrack();}},60000);
 renderAll._d=todayStr();
 </script>
