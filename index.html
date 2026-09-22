@@ -669,7 +669,7 @@ const DEFAULT={habits:[],entries:{},ideas:[],groups:[],
   settings:Object.assign({theme:'system',ideaCollapsed:{},push:{enabled:false,time:'21:00',id:null}},MS_DEFAULTS),nextId:1};
 let S=load();
 function load(){try{const raw=localStorage.getItem(KEY);if(raw)return Object.assign({},DEFAULT,JSON.parse(raw));}catch(e){}return JSON.parse(JSON.stringify(DEFAULT));}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}markDirty();}
 function uid(){return 'i'+(S.nextId++);}
 function migrate(){
   S.habits.forEach(h=>{
@@ -1805,6 +1805,19 @@ function renderSettings(){
     <div class="set-note">Gilt für alle Gewohnheiten. <b>Stabil</b> heißt: Zeit für eine neue Gewohnheit. <b>Archiv-reif</b> heißt: Sie läuft von allein.
       <button class="add-inline" style="display:inline;padding:0;margin-left:4px" onclick="resetMs()">Standard wiederherstellen</button></div>
 
+    <div class="section-label">Sicherung</div>
+    <div class="set-group">
+      <div class="set-row tap" onclick="doBackup(true)"><div class="si acc"><svg viewBox="0 0 24 24"><path d="M17.5 19a4.5 4.5 0 0 0 .5-8.97A6 6 0 0 0 6.34 9.2 4 4 0 0 0 7 19z"/><path d="M12 12v6M9.5 14.5L12 12l2.5 2.5"/></svg></div>
+        <div class="st"><div class="t">Automatische Sicherung</div><div class="d">Zuletzt: ${fmtWhen((st.backup||{}).last)} · Tippen = jetzt sichern</div></div></div>
+      <div class="set-row tap" onclick="openBackupCode()"><div class="si"><svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+        <div class="st"><div class="t">Wiederherstellungs-Code</div><div class="d">Unbedingt sicher aufbewahren</div></div>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></div>
+      <div class="set-row tap" onclick="openRestore()"><div class="si"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></div>
+        <div class="st"><div class="t">Aus Sicherung wiederherstellen</div><div class="d">z. B. auf einem neuen iPhone</div></div>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></div>
+    </div>
+    <div class="set-note">Deine Daten werden auf dem iPhone verschlüsselt und erst dann gesichert. Lesbar sind sie nur mit deinem Code.</div>
+
     <div class="section-label">Daten</div>
     <div class="set-group">
       <div class="set-row tap" onclick="exportData()"><div class="si"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></div>
@@ -1828,8 +1841,9 @@ function b64uToBytes(s){s=s.replace(/-/g,'+').replace(/_/g,'/');const pad='='.re
   const bin=atob(s+pad);return Uint8Array.from(bin,c=>c.charCodeAt(0));}
 function pushId(){if(!S.settings.push.id){S.settings.push.id=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(36).slice(2));save();}
   return S.settings.push.id;}
-async function pushApi(path,body){
-  const r=await fetch(PUSH_URL.replace(/\/$/,'')+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+async function pushApi(path,body,keepalive){
+  const r=await fetch(PUSH_URL.replace(/\/$/,'')+path,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body),keepalive:!!keepalive});
   if(!r.ok)throw new Error('HTTP '+r.status);return r;}
 function togglePush(){if(S.settings.push.enabled)disablePush();else enablePush();}
 async function enablePush(){
@@ -1864,6 +1878,84 @@ async function setPushTime(v){
     toast('Erinnerung jetzt um '+v);}catch(e){toast('Uhrzeit konnte nicht übertragen werden');}
 }
 async function testPush(){try{await pushApi('/test',{id:pushId()});toast('Test ist unterwegs');}catch(e){toast('Test fehlgeschlagen');}}
+
+/* ---------- Automatische Online-Sicherung ----------
+   Laeuft ueber denselben Worker. Die Daten werden auf dem Geraet mit AES-GCM verschluesselt;
+   Schluessel und Speicher-Id werden aus dem Wiederherstellungs-Code abgeleitet, der nie das
+   Geraet verlaesst. Gesichert wird kurz nach Aenderungen, beim Wegwischen der App und
+   beim Start, falls die letzte Sicherung aelter als 20 Stunden ist. */
+const CODE_ABC='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // 32 Zeichen, ohne I/O/0/1
+function newBackupCode(){const b=crypto.getRandomValues(new Uint8Array(24));
+  return [...b].map(x=>CODE_ABC[x&31]).join('').match(/.{4}/g).join('-');}
+function normCode(c){return String(c||'').toUpperCase().replace(/[^A-Z0-9]/g,'');}
+function fmtCode(c){return (normCode(c).match(/.{1,4}/g)||[]).join('-');}
+function toB64(u8){let s='';for(let i=0;i<u8.length;i+=0x8000)s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));return btoa(s);}
+function fromB64(s){return Uint8Array.from(atob(s),c=>c.charCodeAt(0));}
+async function sha256(s){return new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)));}
+async function codeParts(code){const c=normCode(code);
+  const id=[...(await sha256('cadence-id:'+c)).slice(0,16)].map(x=>x.toString(16).padStart(2,'0')).join('');
+  const key=await crypto.subtle.importKey('raw',await sha256('cadence-key:'+c),'AES-GCM',false,['encrypt','decrypt']);
+  return {id,key};}
+function backupState(){if(!S.settings.backup||!S.settings.backup.code){S.settings.backup={code:newBackupCode(),last:null};save();}
+  return S.settings.backup;}
+// von save() aufgerufen: Aenderung merken und gebuendelt sichern
+function markDirty(){markDirty.dirty=true;clearTimeout(markDirty.t);markDirty.t=setTimeout(()=>doBackup(false),20000);}
+async function doBackup(manual,keepalive){
+  if(!PUSH_URL||!window.crypto||!crypto.subtle){if(manual)toast('Sicherung hier nicht möglich');return;}
+  if(doBackup.busy)return;doBackup.busy=true;
+  const bk=backupState();markDirty.dirty=false;
+  try{
+    const {id,key}=await codeParts(bk.code);const iv=crypto.getRandomValues(new Uint8Array(12));
+    const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(JSON.stringify(S))));
+    await pushApi('/backup',{id,backup:{iv:toB64(iv),ct:toB64(ct)}},keepalive);
+    bk.last=new Date().toISOString();
+    try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}   // direkt schreiben: soll keine neue Sicherung ausloesen
+    if(manual)toast('Gesichert');
+    if(activeView()==='settings')renderSettings();
+  }catch(e){markDirty.dirty=true;if(manual)toast('Sicherung fehlgeschlagen – bist du online?');}
+  doBackup.busy=false;
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&markDirty.dirty){clearTimeout(markDirty.t);doBackup(false,true);}});
+function fmtWhen(iso){if(!iso)return 'noch nie';const d=new Date(iso);
+  const t=d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  if(ds(d)===todayStr())return 'heute, '+t;if(ds(d)===ds(addDays(today(),-1)))return 'gestern, '+t;
+  return d.toLocaleDateString('de-DE',{day:'numeric',month:'short'})+', '+t;}
+function openBackupCode(){const bk=backupState();
+  document.getElementById('sheetTitle').textContent='Wiederherstellungs-Code';
+  document.getElementById('sheetBody').innerHTML=`
+    <div class="note-box" style="font-size:19px;font-weight:800;letter-spacing:.06em;text-align:center;padding:16px;white-space:normal;word-break:break-all">${bk.code}</div>
+    <div class="hint" style="font-size:13px;line-height:1.5;color:var(--ink-soft);margin-bottom:6px">Mit diesem Code holst du deine Daten zurück, z. B. auf einem neuen iPhone.
+      <b>Speicher ihn z. B. in deinen Notizen oder im Passwort-Manager.</b> Ohne den Code kann niemand die Sicherung öffnen – auch du nicht.</div>
+    <button class="primary" onclick="copyBackupCode()">Code kopieren</button>
+    <button class="ghost-btn" onclick="hideSheet()">Fertig</button>`;
+  showSheet();}
+async function copyBackupCode(){try{await navigator.clipboard.writeText(backupState().code);toast('Kopiert');}catch(e){toast('Kopieren nicht möglich – bitte abschreiben');}}
+function openRestore(){
+  document.getElementById('sheetTitle').textContent='Wiederherstellen';
+  document.getElementById('sheetBody').innerHTML=`
+    <div class="hint" style="font-size:13px;line-height:1.5;color:var(--ink-soft);margin:0 0 14px">Gib den Wiederherstellungs-Code deiner Sicherung ein.
+      <b>Die Daten auf diesem Gerät werden dabei ersetzt.</b></div>
+    <div class="field"><input id="restoreCode" class="inp" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" autocapitalize="characters" autocomplete="off" spellcheck="false"
+      style="text-transform:uppercase;letter-spacing:.05em;font-weight:700"></div>
+    <button class="primary" onclick="restoreFromCode()">Sicherung laden</button>`;
+  showSheet();}
+async function restoreFromCode(){
+  const inp=document.getElementById('restoreCode');const c=normCode(inp&&inp.value);
+  if(c.length!==24){toast('Der Code hat 24 Zeichen');return;}
+  try{
+    const {id,key}=await codeParts(c);
+    const j=await (await pushApi('/restore',{id})).json();
+    const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:fromB64(j.backup.iv)},key,fromB64(j.backup.ct));
+    const data=JSON.parse(new TextDecoder().decode(pt));
+    const n=(data.habits||[]).length;
+    if(!confirm(`Sicherung von ${fmtWhen(j.backup.at)} mit ${n} ${n===1?'Gewohnheit':'Gewohnheiten'} gefunden.\n\nDaten auf diesem Gerät dadurch ersetzen?`))return;
+    data.settings=data.settings||{};
+    data.settings.backup={code:fmtCode(c),last:j.backup.at};
+    if(data.settings.push)data.settings.push.enabled=false;   // Erinnerung auf dem neuen Geraet neu einschalten
+    localStorage.setItem(KEY,JSON.stringify(data));
+    location.reload();
+  }catch(e){toast(String(e&&e.message).includes('404')?'Zu diesem Code gibt es keine Sicherung':'Wiederherstellen fehlgeschlagen');}
+}
 
 function exportData(){try{const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='cadence-backup.json';
@@ -1914,6 +2006,8 @@ function toast(msg,big){toastEl.textContent=msg;toastEl.className='toast show'+(
 /* ---------- Init ---------- */
 function renderAll(){renderTrack();document.getElementById('viewSub').textContent=titles.track[1]();}
 applyTheme();renderAll();staggerIn('track');
+// beim Start sichern, wenn die letzte Sicherung laenger als 20 Stunden her ist
+setTimeout(()=>{const b=backupState();if(!b.last||Date.now()-Date.parse(b.last)>20*3600000)doBackup(false);},4000);
 setInterval(()=>{const t=todayStr();if(t!==renderAll._d){renderAll._d=t;if(document.querySelector('.nav-item.active').dataset.view==='track')renderTrack();}},60000);
 renderAll._d=todayStr();
 </script>
