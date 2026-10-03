@@ -96,6 +96,25 @@ svg{display:block}
 .tc-bar i{display:block;height:100%;border-radius:6px;transition:width .45s cubic-bezier(.32,.72,0,1)}
 .tc-empty{color:var(--muted);font-size:12.5px;font-weight:500}
 
+/* ---- Rueckfrage zu archivierten Gewohnheiten ---- */
+.recall-card{background:var(--surface);border:1px solid var(--line);border-radius:15px;
+  padding:12px 13px;box-shadow:var(--shadow);margin-bottom:9px}
+.recall-card .rc-top{display:flex;align-items:flex-start;gap:11px}
+.recall-card .ico-tile{width:34px;height:34px;border-radius:11px;flex-shrink:0}
+.recall-card .ico-tile svg{width:18px;height:18px}
+.recall-card .rc-t{flex:1;min-width:0}
+.recall-card .rc-k{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent-ink)}
+.recall-card .rc-q{font-size:13.5px;font-weight:500;line-height:1.4;margin-top:2px}
+.recall-card .rc-q b{font-weight:800}
+.recall-card .rc-btns{display:flex;gap:8px;margin-top:11px}
+.recall-card .rc-btns button{flex:1;padding:11px 8px;border-radius:12px;font-weight:700;font-size:13px;
+  background:var(--surface-2);color:var(--ink-soft);transition:transform .15s}
+.recall-card .rc-btns button.yes{background:var(--accent);color:#fff}
+:root[data-theme="dark"] .recall-card .rc-btns button.yes,:root:not([data-theme="light"]) .recall-card .rc-btns button.yes{color:#10201a}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .recall-card .rc-btns button.yes{color:#fff}}
+.recall-card .rc-btns button:active{transform:scale(.97)}
+.recall-card .rc-later{display:block;margin:10px auto 0;font-size:12px;font-weight:600;color:var(--muted)}
+
 /* ---- Week nav ---- */
 .wknav{display:flex;align-items:center;gap:7px;margin-bottom:9px}
 .wknav .nbtn{width:31px;height:31px;border-radius:10px;background:var(--surface);border:1px solid var(--line);
@@ -683,11 +702,14 @@ const EMOJI_MAP={'🌱':'sprout','💪':'dumbbell','📖':'book','🧘':'yoga','
 const KEY='cadence_v1';
 // Schwellen fuer die automatischen Meilensteine (in den Einstellungen aenderbar)
 const MS_DEFAULTS={stableMinDays:21,stableWindow:14,archiveMinDays:60,archiveWindow:30,archivePct:90};
+// Abstaende (in Tagen) zwischen den Rueckfragen zu archivierten Gewohnheiten:
+// erst nach 15 Tagen, dann in immer groesseren Abstaenden. Der letzte Wert wiederholt sich.
+const CHECK_GAPS=[15,30,60,120,240,365];
 const DEFAULT={habits:[],entries:{},ideas:[],groups:[],
-  settings:Object.assign({theme:'system',ideaCollapsed:{},push:{enabled:false,time:'21:00',id:null}},MS_DEFAULTS),nextId:1};
+  settings:Object.assign({theme:'system',ideaCollapsed:{},push:{enabled:false,time:'21:00',id:null,repeat:false,repeatMax:6}},MS_DEFAULTS),nextId:1};
 let S=load();
 function load(){try{const raw=localStorage.getItem(KEY);if(raw)return Object.assign({},DEFAULT,JSON.parse(raw));}catch(e){}return JSON.parse(JSON.stringify(DEFAULT));}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}markDirty();}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}markDirty();queueStatus();}
 function uid(){return 'i'+(S.nextId++);}
 function migrate(){
   S.habits.forEach(h=>{
@@ -708,9 +730,13 @@ function migrate(){
     if(!h.situations||!h.situations.length)h.situations=[{id:uid(),name:'Standard'}];
     if(h.note==null)h.note='';
     if(h.archived==null){h.archived=false;h.archivedAt=null;}
+    if(h.archived&&!h.check)h.check=newCheck(h.archivedAt||todayStr());   // Rueckfrage-Plan nachruesten
+    if(!h.archived&&h.check)h.check=null;
   });
   S.settings=Object.assign(JSON.parse(JSON.stringify(DEFAULT.settings)),S.settings);
   if(!S.settings.push||typeof S.settings.push!=='object')S.settings.push={enabled:false,time:'21:00',id:null};
+  if(S.settings.push.repeat==null)S.settings.push.repeat=false;
+  if(!(S.settings.push.repeatMax>=1))S.settings.push.repeatMax=6;
   if(!S.settings.ideaCollapsed)S.settings.ideaCollapsed={};
   // bereits erreichte Meilensteine still als "gefeiert" markieren - keine Feier-Welle beim ersten Start
   S.habits.forEach(h=>{if(!h.milestones)h.milestones={stable:isStable(h),archive:isArchiveReady(h)};});
@@ -983,14 +1009,58 @@ function nextCelebration(){
 }
 function archiveHabit(hid){
   const h=S.habits.find(x=>x.id===hid);if(!h)return;
-  h.archived=true;h.archivedAt=todayStr();save();hideSheet();renderTrack();
+  h.archived=true;h.archivedAt=todayStr();h.check=newCheck(h.archivedAt);save();hideSheet();renderTrack();
   if(activeView()==='ideas')renderIdeas();
   toast('Ins Archiv gelegt');
 }
 function unarchiveHabit(hid){
   const h=S.habits.find(x=>x.id===hid);if(!h)return;
-  h.archived=false;h.archivedAt=null;save();hideSheet();renderIdeas();toast('Wieder aktiv');
+  h.archived=false;h.archivedAt=null;h.check=null;save();hideSheet();renderIdeas();toast('Wieder aktiv');
 }
+
+/* ---------- Rueckfrage zu archivierten Gewohnheiten ----------
+   Archiviert heisst nicht vergessen: in immer groesseren Abstaenden (CHECK_GAPS)
+   fragt die App einmal nach, ob die Gewohnheit noch von allein laeuft. "Ja" verschiebt
+   die naechste Frage, "Nein" holt die Gewohnheit zurueck ins Tracking. */
+function newCheck(fromStr){
+  let due=ds(addDays(parse(fromStr||todayStr()),CHECK_GAPS[0]));
+  const tomorrow=ds(addDays(today(),1));
+  if(due<tomorrow)due=tomorrow;          // schon laenger archiviert: fruehestens morgen fragen
+  return {n:0,due,off:false};
+}
+function nextCheckDue(n){return ds(addDays(today(),CHECK_GAPS[Math.min(n,CHECK_GAPS.length-1)]));}
+function daysArchived(h){return Math.max(1,Math.round((today()-parse(h.archivedAt||todayStr()))/86400000));}
+// die aelteste faellige Rueckfrage - es wird immer nur eine auf einmal gezeigt
+function dueRecall(){const t=todayStr();
+  return S.habits.filter(h=>h.archived&&h.check&&!h.check.off&&h.check.due<=t)
+    .sort((a,b)=>a.check.due.localeCompare(b.check.due))[0]||null;}
+function recallCardHTML(){
+  const h=dueRecall();if(!h)return '';
+  const d=daysArchived(h);
+  const seit=d>=60?Math.round(d/30)+' Monaten':d+' '+(d===1?'Tag':'Tagen');
+  return `<div class="recall-card"><div class="rc-top">
+      <div class="ico-tile">${svgIcon(h.icon)}</div>
+      <div class="rc-t"><div class="rc-k">Kurze Rückfrage</div>
+        <div class="rc-q"><b>${esc(h.name)}</b> liegt seit ${seit} im Archiv. Läuft sie noch von allein?</div></div>
+    </div>
+    <div class="rc-btns">
+      <button class="yes" onclick="recallKeep('${h.id}')">Ja, läuft</button>
+      <button onclick="recallBack('${h.id}')">Nein, zurückholen</button>
+    </div>
+    <button class="rc-later" onclick="recallLater('${h.id}')">Später fragen</button></div>`;
+}
+function recallKeep(hid){const h=S.habits.find(x=>x.id===hid);if(!h||!h.check)return;
+  h.check.n++;h.check.due=nextCheckDue(h.check.n);save();renderTrack();toast('Schön – bleibt im Archiv 🌱');}
+function recallLater(hid){const h=S.habits.find(x=>x.id===hid);if(!h||!h.check)return;
+  h.check.due=ds(addDays(today(),3));save();renderTrack();toast('Frage in 3 Tagen nochmal');}
+function recallBack(hid){const h=S.habits.find(x=>x.id===hid);if(!h)return;
+  h.archived=false;h.archivedAt=null;h.check=null;save();renderTrack();
+  if(activeView()==='ideas')renderIdeas();
+  toast('Wieder im Tracking');}
+function recallOff(hid){const h=S.habits.find(x=>x.id===hid);if(!h||!h.check)return;
+  h.check.off=true;save();openArchived(hid);toast('Keine Rückfragen mehr');}
+function recallOn(hid){const h=S.habits.find(x=>x.id===hid);if(!h)return;
+  h.check=newCheck(h.archivedAt||todayStr());save();openArchived(hid);toast('Rückfragen wieder an');}
 
 /* ---------- TRACK view ---------- */
 const V={track:document.getElementById('view-track'),stats:document.getElementById('view-stats'),
@@ -1018,13 +1088,21 @@ function dayBlend(g,o,r){
     stops.push(c1+' '+s0+'%');stops.push(c2+' '+s1+'%');acc+=n;});
   return 'linear-gradient(90deg,'+stops.join(',')+')';
 }
-function todayCardHTML(){
-  let total=0,tracked=0,g=0,o=0,r=0;
-  activeHabits().forEach(h=>{const due=dueToday(h);
-    h.situations.forEach(s=>{const v=getE(h.id,s.id,todayStr());
-      if(!due&&!v)return;              // flexible habit (Woche/Monat) not tracked today → ignore
+// Wieviel ist an einem Tag schon entschieden? Basis fuer "Dein Tag" und fuer die
+// Rueckmeldung an den Push-Server (stuendliche Nacherinnerung).
+function dayCounts(dStr){
+  const d=parse(dStr);let total=0,tracked=0,g=0,o=0,r=0;
+  activeHabits().forEach(h=>{const due=dueOnDate(h,d);
+    h.situations.forEach(s=>{const v=getE(h.id,s.id,dStr);
+      if(!due&&!v)return;              // flexible habit (Woche/Monat) not tracked that day → ignore
       total++;
       if(v){tracked++;if(v==='g')g++;else if(v==='o')o++;else r++;}});});
+  return {total,tracked,g,o,r};
+}
+// Tag komplett: jede faellige Situation ist entschieden (gruen, orange oder rot)
+function dayComplete(dStr){const c=dayCounts(dStr);return c.tracked>=c.total;}
+function todayCardHTML(){
+  const {total,tracked,g,o,r}=dayCounts(todayStr());
   if(total===0)return `<div class="today-card"><div class="tc-head"><span class="tc-title">Dein Tag</span></div>
     <div class="tc-empty">Für heute ist nichts geplant. Genieß den Tag.</div></div>`;
   const pct=(tracked/total*100);
@@ -1036,7 +1114,7 @@ function todayCardHTML(){
 function renderTrack(){
   const el=V.track;
   if(activeHabits().length===0){
-    el.innerHTML=`<div class="empty"><div class="ico">${svgIcon('sprout')}</div>
+    el.innerHTML=recallCardHTML()+`<div class="empty"><div class="ico">${svgIcon('sprout')}</div>
       <h2>Noch keine Gewohnheiten</h2><p>Lege deine erste Gewohnheit an und tracke sie Tag&nbsp;für&nbsp;Tag.</p>
       <button class="primary" style="max-width:230px;margin:0 auto" onclick="openHabitEditor()">Erste Gewohnheit anlegen</button></div>`;
     return;
@@ -1044,7 +1122,7 @@ function renderTrack(){
   const mon=addDays(mondayOf(today()),weekOffset*7);
   const tStr=todayStr();const now=today();
 
-  let html=todayCardHTML();
+  let html=recallCardHTML()+todayCardHTML();
   html+=`<div class="seg-toggle view-toggle">
     <button class="${trackView==='today'?'sel':''}" onclick="setTrackView('today')">Heute</button>
     <button class="${trackView==='week'?'sel':''}" onclick="setTrackView('week')">Woche</button>
@@ -1656,6 +1734,11 @@ function openArchived(hid){const h=S.habits.find(x=>x.id===hid);if(!h)return;
       <div><b>${lifeRate(h)}%</b><span>Erfolgsquote</span></div></div>
     ${h.note&&h.note.trim()?`<div class="field"><label>Notiz</label><div class="note-box">${esc(h.note)}</div></div>`:''}
     ${renderYear(h)}
+    ${h.check&&!h.check.off
+      ?`<div class="hint" style="margin:-2px 0 10px">Nächste Rückfrage am ${fmtShort(parse(h.check.due))}.
+        <button class="add-inline" style="display:inline;padding:0;margin-left:4px" onclick="recallOff('${h.id}')">Nicht mehr fragen</button></div>`
+      :`<div class="hint" style="margin:-2px 0 10px">Keine Rückfragen zu dieser Gewohnheit.
+        <button class="add-inline" style="display:inline;padding:0;margin-left:4px" onclick="recallOn('${h.id}')">Wieder nachfragen</button></div>`}
     <button class="primary" onclick="unarchiveHabit('${h.id}')">Wieder aktivieren</button>
     <button class="danger-btn" onclick="deleteHabitById('${h.id}')">Endgültig löschen</button>`;
   showSheet();}
@@ -1815,6 +1898,13 @@ function renderSettings(){
       <div class="set-row"><div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg></div>
         <div class="st"><div class="t">Uhrzeit</div><div class="d">Wann soll sie kommen?</div></div>
         <input type="time" class="inp" value="${pu.time}" onchange="setPushTime(this.value)"></div>
+      <div class="set-row"><div class="si"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></div>
+        <div class="st"><div class="t">Stündlich nacherinnern</div><div class="d">Bis alles für den Tag getrackt ist</div></div>
+        <div class="switch ${pu.repeat?'on':''}" onclick="toggleRepeat()"></div></div>
+      ${pu.repeat?`<div class="set-row"><div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg></div>
+        <div class="st"><div class="t">Höchstens</div><div class="d">Nacherinnerungen, dann ist Ruhe</div></div>
+        <div class="mini-step"><button onclick="stepRepeatMax(-1)">−</button>
+          <div class="v">${pu.repeatMax}</div><button onclick="stepRepeatMax(1)">+</button></div></div>`:''}
       ${pu.enabled?`<div class="set-row tap" onclick="testPush()"><div class="si"><svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></div>
         <div class="st"><div class="t">Test senden</div><div class="d">Kommt in ein paar Sekunden an</div></div></div>`:''}
     </div>
@@ -1876,8 +1966,7 @@ async function enablePush(){
     const reg=await navigator.serviceWorker.ready;
     let sub=await reg.pushManager.getSubscription();
     if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64uToBytes(VAPID_PUBLIC)});
-    await pushApi('/subscribe',{id:pushId(),subscription:sub.toJSON(),time:S.settings.push.time,
-      tz:Intl.DateTimeFormat().resolvedOptions().timeZone});
+    await pushApi('/subscribe',pushBody(sub));
     S.settings.push.enabled=true;save();renderSettings();toast('Erinnerung aktiv – täglich um '+S.settings.push.time);
   }catch(e){toast('Hat nicht geklappt – bitte später nochmal');}
 }
@@ -1891,12 +1980,47 @@ async function disablePush(){
 async function setPushTime(v){
   if(!v)return;S.settings.push.time=v;save();
   if(!S.settings.push.enabled)return;
-  try{const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();
-    if(!sub)throw 0;
-    await pushApi('/subscribe',{id:pushId(),subscription:sub.toJSON(),time:v,tz:Intl.DateTimeFormat().resolvedOptions().timeZone});
-    toast('Erinnerung jetzt um '+v);}catch(e){toast('Uhrzeit konnte nicht übertragen werden');}
+  try{await pushSync();toast('Erinnerung jetzt um '+v);}catch(e){toast('Uhrzeit konnte nicht übertragen werden');}
 }
 async function testPush(){try{await pushApi('/test',{id:pushId()});toast('Test ist unterwegs');}catch(e){toast('Test fehlgeschlagen');}}
+
+/* ---------- Stuendliche Nacherinnerung ----------
+   Der Server schickt nach der taeglichen Erinnerung stuendlich nach, solange der Tag
+   nicht komplett getrackt ist. Damit er das weiss, meldet die App ihm (und nur ihm),
+   welche Tage fertig sind - keine Inhalte, nur Datum + "erledigt". */
+function pushBody(sub){const pu=S.settings.push;
+  return {id:pushId(),subscription:sub.toJSON(),time:pu.time,repeat:!!pu.repeat,repeatMax:pu.repeatMax,
+    tz:Intl.DateTimeFormat().resolvedOptions().timeZone};}
+// aktuelle Einstellungen zum Server schicken (nur sinnvoll, wenn die Erinnerung an ist)
+async function pushSync(){
+  if(!S.settings.push.enabled)return;
+  const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();
+  if(!sub)throw new Error('kein Abo');
+  await pushApi('/subscribe',pushBody(sub));
+  statusKey='';await pushStatus();
+}
+function toggleRepeat(){const pu=S.settings.push;pu.repeat=!pu.repeat;save();renderSettings();
+  if(!pu.enabled){toast(pu.repeat?'Gilt, sobald die Erinnerung an ist':'Nacherinnerungen aus');return;}
+  pushSync().then(()=>toast(pu.repeat?'Nacherinnerungen an':'Nacherinnerungen aus'))
+    .catch(()=>toast('Nicht übertragen – bist du online?'));}
+function stepRepeatMax(d){const pu=S.settings.push;
+  pu.repeatMax=Math.min(12,Math.max(1,(pu.repeatMax||6)+d));save();renderSettings();
+  clearTimeout(stepRepeatMax.t);stepRepeatMax.t=setTimeout(()=>{pushSync().catch(()=>{});},900);}
+// Tage, die komplett getrackt sind (heute und gestern - nachts wird oft noch nachgetragen)
+function doneDates(){return [todayStr(),ds(addDays(today(),-1))].filter(dayComplete);}
+let statusKey='';
+function queueStatus(){clearTimeout(queueStatus.t);queueStatus.t=setTimeout(()=>pushStatus(),2500);}
+async function pushStatus(keepalive){
+  const pu=S.settings.push;
+  if(!PUSH_URL||!pu||!pu.enabled||!pu.repeat||!pu.id)return;
+  const k=doneDates().join(',');
+  if(k===statusKey)return;
+  statusKey=k;
+  try{await pushApi('/status',{id:pushId(),done:k?k.split(','):[]},keepalive);}catch(e){statusKey='';}
+}
+// offene Erinnerungen wegraeumen, sobald die App vorn ist
+async function clearNotifs(){try{const reg=await navigator.serviceWorker.getRegistration();
+  if(!reg||!reg.getNotifications)return;(await reg.getNotifications()).forEach(n=>n.close());}catch(e){}}
 
 /* ---------- Automatische Online-Sicherung ----------
    Laeuft ueber denselben Worker. Die Daten werden auf dem Geraet mit AES-GCM verschluesselt;
@@ -2025,9 +2149,12 @@ function toast(msg,big){toastEl.textContent=msg;toastEl.className='toast show'+(
 /* ---------- Init ---------- */
 function renderAll(){renderTrack();document.getElementById('viewSub').textContent=titles.track[1]();}
 applyTheme();renderAll();staggerIn('track');
+clearNotifs();pushStatus();
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'){clearNotifs();pushStatus();}else pushStatus(true);});
 // beim Start sichern, wenn die letzte Sicherung laenger als 20 Stunden her ist
 setTimeout(()=>{const b=backupState();if(!b.last||Date.now()-Date.parse(b.last)>20*3600000)doBackup(false);},4000);
-setInterval(()=>{const t=todayStr();if(t!==renderAll._d){renderAll._d=t;if(document.querySelector('.nav-item.active').dataset.view==='track')renderTrack();}},60000);
+setInterval(()=>{const t=todayStr();if(t!==renderAll._d){renderAll._d=t;pushStatus();if(document.querySelector('.nav-item.active').dataset.view==='track')renderTrack();}},60000);
 renderAll._d=todayStr();
 </script>
 

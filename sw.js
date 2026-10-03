@@ -1,5 +1,5 @@
 /* Cadence service worker – fresh app shell, offline fallback */
-const CACHE = 'cadence-v15';
+const CACHE = 'cadence-v17';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest',
   './icon-192.png', './icon-512.png', './apple-touch-icon.png'
@@ -25,17 +25,20 @@ self.addEventListener('push', e => {
   try { data = e.data ? e.data.json() : {}; } catch (_) { data = { body: e.data && e.data.text() }; }
   e.waitUntil(self.registration.showNotification(data.title || 'Cadence', {
     body: data.body || 'Zeit fürs Tracken 🌱 – wie war dein Tag?',
-    icon: 'icon-192.png', badge: 'icon-192.png', tag: 'cadence-daily'
+    icon: 'icon-192.png', badge: 'icon-192.png', tag: data.tag || 'cadence-daily'
   }));
 });
 
-// Tippen auf die Mitteilung: offene App nach vorn holen oder neu oeffnen
+// Tippen auf die Mitteilung: alle offenen Cadence-Mitteilungen wegraeumen
+// (stuendliche Nacherinnerungen koennen sich stapeln), dann die App nach vorn holen
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+  e.waitUntil((async () => {
+    try { (await self.registration.getNotifications()).forEach(n => n.close()); } catch (_) {}
+    const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const c of list) if ('focus' in c) return c.focus();
     return self.clients.openWindow('./');
-  }));
+  })());
 });
 
 self.addEventListener('fetch', e => {
