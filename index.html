@@ -703,8 +703,9 @@ const KEY='cadence_v1';
 // Schwellen fuer die automatischen Meilensteine (in den Einstellungen aenderbar)
 const MS_DEFAULTS={stableMinDays:21,stableWindow:14,archiveMinDays:60,archiveWindow:30,archivePct:90};
 // Abstaende (in Tagen) zwischen den Rueckfragen zu archivierten Gewohnheiten:
-// erst nach 15 Tagen, dann in immer groesseren Abstaenden. Der letzte Wert wiederholt sich.
-const CHECK_GAPS=[15,30,60,120,240,365];
+// erst nach 5 Tagen, dann in immer groesseren Abstaenden bis 2 Jahre. Der letzte Wert wiederholt sich.
+const CHECK_GAPS=[5,10,15,20,30,45,90,180,360,730];
+const CHECK_GAPS_V=2;   // Version der Abstaende: steigt sie, werden offene erste Rueckfragen neu gelegt
 const DEFAULT={habits:[],entries:{},ideas:[],groups:[],
   settings:Object.assign({theme:'system',ideaCollapsed:{},push:{enabled:false,time:'21:00',id:null,repeat:false,repeatMax:6}},MS_DEFAULTS),nextId:1};
 let S=load();
@@ -738,6 +739,11 @@ function migrate(){
   if(S.settings.push.repeat==null)S.settings.push.repeat=false;
   if(!(S.settings.push.repeatMax>=1))S.settings.push.repeatMax=6;
   if(!S.settings.ideaCollapsed)S.settings.ideaCollapsed={};
+  // neue Abstaende auch auf noch offene erste Rueckfragen anwenden (einmalig je Version)
+  if(S.settings.checkGapsV!==CHECK_GAPS_V){
+    S.habits.forEach(h=>{if(h.archived&&h.check&&!h.check.off&&!h.check.n)h.check.due=newCheck(h.archivedAt).due;});
+    S.settings.checkGapsV=CHECK_GAPS_V;
+  }
   // bereits erreichte Meilensteine still als "gefeiert" markieren - keine Feier-Welle beim ersten Start
   S.habits.forEach(h=>{if(!h.milestones)h.milestones={stable:isStable(h),archive:isArchiveReady(h)};});
   if(!Array.isArray(S.ideas))S.ideas=[];
