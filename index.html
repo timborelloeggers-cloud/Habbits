@@ -434,6 +434,8 @@ select.inp{appearance:none;-webkit-appearance:none;
 .set-row .inp{width:auto;padding:8px 11px}
 .set-row .chev{stroke:var(--faint);width:17px;height:17px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .set-row.tap:active{background:var(--surface-2)}
+.set-row .chev.fold{transition:transform .25s cubic-bezier(.34,1.4,.5,1)}
+.set-row .chev.fold.open{transform:rotate(180deg)}
 .pill-val{color:var(--muted);font-size:13px;font-weight:600}
 
 /* ideas */
@@ -525,6 +527,7 @@ textarea.inp{resize:vertical;min-height:74px;line-height:1.45;font-size:16px}
 .ms-top .no{font-size:11.5px;font-weight:600;color:var(--faint)}
 .ms-line{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-weight:600;margin-top:5px}
 .ms-line .y{color:var(--g-ink)}
+.ms-why{font-size:12.5px;color:var(--ink-soft);font-weight:500;line-height:1.4;margin:-2px 0 8px}
 
 /* ---- Einstellungen: kompakter Stepper ---- */
 .mini-step{display:flex;align-items:center;gap:6px;flex-shrink:0}
@@ -562,6 +565,15 @@ textarea.inp{resize:vertical;min-height:74px;line-height:1.45;font-size:16px}
 .arch-sum b{display:block;font-family:"Fraunces",serif;font-weight:500;font-size:22px}
 .arch-sum span{font-size:11px;color:var(--muted);font-weight:600}
 .note-box{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:11px 13px;font-size:13.5px;line-height:1.45;margin-bottom:12px;white-space:pre-wrap}
+/* Notiz mit Ablauf: Zeilen mit "-" erscheinen als ruhige Liste (bewusst ohne Haken) */
+.note-box.rich{white-space:normal}
+.note-box.rich p{margin:0 0 4px}
+.note-box.rich p:last-child{margin-bottom:0}
+.note-list{list-style:none;margin:2px 0 6px;padding:0}
+.note-list:last-child{margin-bottom:0}
+.note-list li{position:relative;padding:6px 0 6px 18px;border-top:1px solid var(--line)}
+.note-list li:first-child{border-top:none}
+.note-list li::before{content:"";position:absolute;left:4px;top:14px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
 
 /* ---- Wissen ---- */
 .kcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin-bottom:9px;box-shadow:var(--shadow);overflow:hidden}
@@ -832,9 +844,13 @@ function habitStart(h){
   Object.values(e).forEach(m=>Object.keys(m).forEach(k=>{if(k<first)first=k;}));
   return parse(first);
 }
-function trackedDays(h){
-  const t=today();const t0=new Date(t.getFullYear(),t.getMonth(),t.getDate());
-  return Math.max(0,Math.round((t0-habitStart(h))/86400000)+1);
+// Erledigte (gruene) Tage seit Beginn - Grundlage fuer Stabil/Archiv-reif.
+// Kalendertage allein sagen zu wenig: 21 Tage dabei, aber nur 12 erledigt, ist noch nicht stabil.
+function greenDays(h){
+  const dates=new Set();
+  Object.values(S.entries[h.id]||{}).forEach(m=>Object.keys(m).forEach(k=>dates.add(k)));
+  let n=0;dates.forEach(k=>{if(dayFull(h,k)==='g')n++;});
+  return n;
 }
 // Streak nach "nie zweimal auslassen": gezaehlt werden erledigte geplante Tage.
 // Ein einzelner verpasster Tag zaehlt nicht mit, bricht aber nicht - erst zwei
@@ -914,13 +930,29 @@ function recentPeriods(h,days){
   return out;
 }
 function stableInfo(h){const c=S.settings;const p=recentPeriods(h,c.stableWindow);
-  const clean=!p.includes('miss')&&p.includes('ok');const days=trackedDays(h);
+  const clean=!p.includes('miss')&&p.includes('ok');const days=greenDays(h);
   return {days,minDays:c.stableMinDays,window:c.stableWindow,clean,met:days>=c.stableMinDays&&clean};}
 function archiveInfo(h){const c=S.settings;const p=recentPeriods(h,c.archiveWindow);
   const ok=p.filter(x=>x==='ok').length,miss=p.filter(x=>x==='miss').length;
-  const rate=(ok+miss)?Math.round(ok/(ok+miss)*100):0;const days=trackedDays(h);
+  const rate=(ok+miss)?Math.round(ok/(ok+miss)*100):0;const days=greenDays(h);
   return {days,minDays:c.archiveMinDays,window:c.archiveWindow,pct:c.archivePct,rate,
     met:days>=c.archiveMinDays&&(ok+miss)>0&&rate>=c.archivePct};}
+// Klartext, warum ein Meilenstein erreicht ist - oder was noch fehlt
+function tageWort(n){return n===1?'Tag':'Tage';}
+function stableReason(s){
+  if(s.met)return `Weil: ${s.days} erledigte Tage und die letzten ${s.window} Tage ohne Lücke.`;
+  const miss=[];
+  if(s.days<s.minDays)miss.push(`noch ${s.minDays-s.days} erledigte ${tageWort(s.minDays-s.days)}`);
+  if(!s.clean)miss.push(`die letzten ${s.window} Tage ohne Lücke`);
+  return 'Fehlt: '+miss.join(' und ')+'.';
+}
+function archiveReason(a){
+  if(a.met)return `Weil: ${a.days} erledigte Tage und ${a.rate} % in den letzten ${a.window} Tagen.`;
+  const miss=[];
+  if(a.days<a.minDays)miss.push(`noch ${a.minDays-a.days} erledigte ${tageWort(a.minDays-a.days)}`);
+  if(a.rate<a.pct)miss.push(`mind. ${a.pct} % in den letzten ${a.window} Tagen (gerade ${a.rate} %)`);
+  return 'Fehlt: '+miss.join(' und ')+'.';
+}
 function isStable(h){return stableInfo(h).met;}
 function isArchiveReady(h){return archiveInfo(h).met;}
 function habitStatus(h){return isArchiveReady(h)?'archive':isStable(h)?'stable':null;}
@@ -989,13 +1021,13 @@ function nextCelebration(){
     text=`<b>${esc(h.name)}</b> – du hast durchgezogen. Wenn die Gewohnheit jetzt sitzt, kannst du sie ins Archiv legen.`;
     btns=`<button class="primary" onclick="archiveHabit('${h.id}');nextCelebration()">Archivieren</button>${later}`;
   }else if(it.kind==='stable'){
-    const c=S.settings;kicker='Meilenstein';title='Stabil!';
-    text=`<b>${esc(h.name)}</b> läuft seit ${c.stableWindow} Tagen ohne Aussetzer. Zeit, eine neue Gewohnheit dazuzunehmen.`;
+    const s=stableInfo(h);kicker='Meilenstein';title='Stabil!';
+    text=`<b>${esc(h.name)}</b> sitzt: ${s.days} erledigte Tage, die letzten ${s.window} ohne Lücke. Zeit, eine neue Gewohnheit dazuzunehmen.`;
     btns=`<button class="primary" onclick="nextCelebration();openIdeasTab()">Zu meinen Ideen</button>
       <button class="danger-btn" onclick="nextCelebration()">Später</button>`;
   }else{
     const a=archiveInfo(h);kicker='Meilenstein';title='Archiv-reif!';
-    text=`<b>${esc(h.name)}</b> läuft von allein – ${a.rate}&nbsp;% in den letzten ${a.window} Tagen. Du kannst sie jetzt archivieren.`;
+    text=`<b>${esc(h.name)}</b> läuft von allein – ${a.days} erledigte Tage und ${a.rate}&nbsp;% in den letzten ${a.window} Tagen. Du kannst sie jetzt archivieren.`;
     btns=`<button class="primary" onclick="archiveHabit('${h.id}');nextCelebration()">Archivieren</button>${later}`;
   }
   document.getElementById('celCard').innerHTML=`
@@ -1469,6 +1501,37 @@ function clearDay(){const h=S.habits.find(x=>x.id===curDay.hid);
   h.situations.forEach(s=>setE(curDay.hid,s.id,curDay.date,undefined));
   hideSheet();renderTrack();toast('Zurückgesetzt');}
 
+/* ---------- Notiz & Ablauf ----------
+   Zeilen, die mit "-" (oder "•") anfangen, werden als Ablauf-Liste angezeigt - bewusst
+   ohne Haken: der Ablauf ist eine Gedaechtnisstuetze, keine zusaetzliche Tracking-Ebene. */
+const STEP_RE=/^\s*[-–—•*]\s*(\S.*)$/;
+function noteLabel(note){
+  const lines=String(note||'').split('\n');
+  const steps=lines.some(l=>STEP_RE.test(l)),text=lines.some(l=>l.trim()&&!STEP_RE.test(l));
+  return steps&&text?'Notiz & Ablauf':steps?'Ablauf':'Notiz';
+}
+function noteHTML(note){
+  let html='',list=[];
+  const flush=()=>{if(list.length){html+='<ul class="note-list">'+list.map(t=>`<li>${esc(t)}</li>`).join('')+'</ul>';list=[];}};
+  String(note||'').split('\n').forEach(l=>{
+    const m=l.match(STEP_RE);
+    if(m){list.push(m[1].trim());return;}
+    flush();if(l.trim())html+=`<p>${esc(l)}</p>`;
+  });
+  flush();return html;
+}
+// beim Zeilenumbruch in einer "- "-Zeile geht die Liste weiter; Enter auf leerer "- "-Zeile beendet sie
+function noteKey(e,ta){
+  if(e.key!=='Enter'||e.shiftKey||e.isComposing)return;
+  const v=ta.value,pos=ta.selectionStart;if(pos!==ta.selectionEnd)return;
+  const ls=v.lastIndexOf('\n',pos-1)+1;
+  const m=v.slice(ls,pos).match(/^(\s*[-–—•*]\s+)(.*)$/);if(!m)return;
+  e.preventDefault();
+  if(!m[2].trim()){ta.value=v.slice(0,ls)+v.slice(pos);ta.selectionStart=ta.selectionEnd=ls;}
+  else{const ins='\n'+m[1];ta.value=v.slice(0,pos)+ins+v.slice(pos);ta.selectionStart=ta.selectionEnd=pos+ins.length;}
+  draft.note=ta.value;
+}
+
 /* ---------- Habit editor ---------- */
 let draft=null;
 function openHabitEditor(hid){
@@ -1519,6 +1582,24 @@ function renderEditor(){
       <button style="margin-left:auto" onclick="draft.goalN=draft.goalN+1;renderEditor()">+</button></div>
     <div class="hint" style="margin-top:8px">🎉 Du bekommst eine kleine Feier, sobald du das erreichst – danach läuft der Habit normal weiter. Einmal Auslassen ist okay, erst zweimal hintereinander setzt die Serie zurück.</div>`:'';
 
+  // archivierte Gewohnheit: nur Name, Notiz/Ablauf und Symbol - Rhythmus & Tracking ruhen
+  const arch=!!d.archived;
+  const noteRows=Math.min(12,Math.max(3,String(d.note||'').split('\n').length+1));
+  const noteField=`<div class="field"><label>Notiz & Ablauf</label>
+      <textarea class="inp" rows="${noteRows}" placeholder="Warum, wann, wo – alles, was dir hilft.&#10;- Schritt 1&#10;- Schritt 2"
+        oninput="draft.note=this.value" onkeydown="noteKey(event,this)">${esc(d.note)}</textarea>
+      <div class="hint">Zeilen mit „-" am Anfang werden zur Ablauf-Liste – z. B. die einzelnen Schritte deiner Routine.</div></div>`;
+  if(arch){
+    document.getElementById('sheetBody').innerHTML=`
+    <div class="field"><label>Name</label>
+      <input class="inp" value="${esc(d.name)}" placeholder="z. B. Meditieren" oninput="draft.name=this.value"></div>
+    ${noteField}
+    <div class="field"><label>Symbol</label><div class="icon-pick">${icons}</div></div>
+    <div class="field"><div class="hint" style="margin-top:-6px">Im Archiv ruhen Rhythmus, Situationen und Ziel. Den Ablauf kannst du trotzdem weiter ausbauen.</div></div>
+    <button class="primary" onclick="saveHabit()">Speichern</button>`;
+    return;
+  }
+
   // --- Meilensteine (automatisch, nur Anzeige) ---
   let msBox='';
   if(d.id){
@@ -1527,21 +1608,22 @@ function renderEditor(){
     msBox=`<div class="esec">Meilensteine<span class="opt"> · automatisch</span></div>
     <div class="field"><div class="ms-box">
       <div class="ms-row"><div class="ms-top"><b>Stabil</b>${st.met?'<span class="ok">✓ erreicht</span>':'<span class="no">noch nicht</span>'}</div>
+        <div class="ms-why">${stableReason(st)}</div>
         <div class="gb-track"><i style="width:${Math.min(100,st.days/st.minDays*100)}%"></i></div>
-        <div class="ms-line"><span>Tage dabei (mind. ${st.minDays})</span><span class="${st.days>=st.minDays?'y':''}">${st.days}</span></div>
+        <div class="ms-line"><span>Erledigte Tage (mind. ${st.minDays})</span><span class="${st.days>=st.minDays?'y':''}">${st.days}</span></div>
         <div class="ms-line"><span>Letzte ${st.window} Tage ohne Aussetzer</span><span class="${st.clean?'y':''}">${st.clean?'ja':'nein'}</span></div></div>
       <div class="ms-row"><div class="ms-top"><b>Archiv-reif</b>${ar.met?'<span class="ok">✓ erreicht</span>':'<span class="no">noch nicht</span>'}</div>
+        <div class="ms-why">${archiveReason(ar)}</div>
         <div class="gb-track"><i style="width:${Math.min(100,ar.days/ar.minDays*100)}%"></i></div>
-        <div class="ms-line"><span>Tage dabei (mind. ${ar.minDays})</span><span class="${ar.days>=ar.minDays?'y':''}">${ar.days}</span></div>
+        <div class="ms-line"><span>Erledigte Tage (mind. ${ar.minDays})</span><span class="${ar.days>=ar.minDays?'y':''}">${ar.days}</span></div>
         <div class="ms-line"><span>Quote letzte ${ar.window} Tage (mind. ${ar.pct} %)${unitW!=='Tage'?' – in '+unitW:''}</span><span class="${ar.rate>=ar.pct?'y':''}">${ar.rate} %</span></div></div>
-    </div><div class="hint">Stabil → Zeit für eine neue Gewohnheit. Archiv-reif → sie läuft von allein. Die Schwellen änderst du in den Einstellungen.</div></div>`;
+    </div><div class="hint">Stabil → Zeit für eine neue Gewohnheit. Archiv-reif → sie läuft von allein. Die Schwellen änderst du in den Einstellungen unter „Erweitert“.</div></div>`;
   }
 
   document.getElementById('sheetBody').innerHTML=`
     <div class="field"><label>Name</label>
       <input class="inp" value="${esc(d.name)}" placeholder="z. B. Meditieren" oninput="draft.name=this.value"></div>
-    <div class="field"><label>Notiz</label>
-      <textarea class="inp" rows="3" placeholder="Warum, wann, wo – alles, was dir hilft" oninput="draft.note=this.value">${esc(d.note)}</textarea></div>
+    ${noteField}
     <div class="field"><label>Symbol</label><div class="icon-pick">${icons}</div></div>
 
     <div class="esec">Rhythmus</div>
@@ -1585,11 +1667,13 @@ function saveHabit(){
   if(d.schedule==='weekdays'&&!d.weekdays.length){toast('Bitte Wochentage wählen');return;}
   d.situations=d.situations.filter((s,i)=>s.name.trim()||d.situations.length===1);
   d.situations.forEach((s,i)=>{if(!s.name.trim())s.name=d.situations.length>1?('Situation '+(i+1)):'Standard';});
+  d.note=String(d.note||'').replace(/\s+$/,'');
   const isNew=!d.id;
   if(d._fromIdea){S.ideas=S.ideas.filter(i=>i.id!==d._fromIdea);delete d._fromIdea;}
   if(!isNew){const idx=S.habits.findIndex(x=>x.id===d.id);S.habits[idx]=d;}
   else{d.id=uid();S.habits.push(d);}
   d.celebrated=goalMet(d);   // avoid re-celebrating an already-met goal on the next check
+  if(d.archived){save();if(activeView()==='ideas')renderIdeas();openArchived(d.id);toast('Gespeichert');return;}
   save();hideSheet();renderTrack();toast(isNew?'Angelegt':'Gespeichert');
 }
 function deleteHabit(){deleteHabitById(draft.id);}
@@ -1738,7 +1822,7 @@ function openArchived(hid){const h=S.habits.find(x=>x.id===hid);if(!h)return;
     <div class="de-date" style="text-transform:none">Archiviert am ${fmtLong(parse(h.archivedAt||todayStr()))}</div>
     <div class="arch-sum"><div><b>${archDays(h)}</b><span>Tage dabei</span></div>
       <div><b>${lifeRate(h)}%</b><span>Erfolgsquote</span></div></div>
-    ${h.note&&h.note.trim()?`<div class="field"><label>Notiz</label><div class="note-box">${esc(h.note)}</div></div>`:''}
+    ${h.note&&h.note.trim()?`<div class="field"><label>${noteLabel(h.note)}</label><div class="note-box rich">${noteHTML(h.note)}</div></div>`:''}
     ${renderYear(h)}
     ${h.check&&!h.check.off
       ?`<div class="hint" style="margin:-2px 0 10px">Nächste Rückfrage am ${fmtShort(parse(h.check.due))}.
@@ -1746,6 +1830,7 @@ function openArchived(hid){const h=S.habits.find(x=>x.id===hid);if(!h)return;
       :`<div class="hint" style="margin:-2px 0 10px">Keine Rückfragen zu dieser Gewohnheit.
         <button class="add-inline" style="display:inline;padding:0;margin-left:4px" onclick="recallOn('${h.id}')">Wieder nachfragen</button></div>`}
     <button class="primary" onclick="unarchiveHabit('${h.id}')">Wieder aktivieren</button>
+    <button class="ghost-btn" onclick="openHabitEditor('${h.id}')">Bearbeiten · Notiz & Ablauf</button>
     <button class="danger-btn" onclick="deleteHabitById('${h.id}')">Endgültig löschen</button>`;
   showSheet();}
 
@@ -1811,10 +1896,10 @@ kcard('mountain','Dranbleiben','Wenn die Motivation nachlässt',`
 kcard('star','Die Regeln dieser App','So benutzt du Cadence',`
   <ul><li><b>Wenige gleichzeitig:</b> Lieber 5 Gewohnheiten, die sitzen, als 15 halbe.</li>
   <li><b>Nie zweimal:</b> Einmal verpasst hält den Streak am Leben, zweimal in Folge setzt ihn zurück. Orange (entschuldigt) zählt nie als verpasst.</li>
-  <li><b>Stabil</b> (Standard: mind. 21 Tage dabei, letzte 14 Tage ohne Aussetzer) → hol dir die nächste Idee.</li>
-  <li><b>Archiv-reif</b> (Standard: mind. 60 Tage dabei, mind. 90 % in den letzten 30 Tagen) → ins Archiv, sie läuft von allein.</li>
+  <li><b>Stabil</b> (Standard: mind. 21 erledigte Tage, letzte 14 Tage ohne Aussetzer) → hol dir die nächste Idee.</li>
+  <li><b>Archiv-reif</b> (Standard: mind. 60 erledigte Tage, mind. 90 % in den letzten 30 Tagen) → ins Archiv, sie läuft von allein.</li>
   <li><b>Ideen parken:</b> Neue Einfälle landen sofort in den Ideen. Das hält den Kopf frei.</li>
-  <li>Die Schwellen änderst du unter Einstellungen → Meilensteine.</li></ul>`);
+  <li>Die Schwellen änderst du unter Einstellungen → Meilensteine → Erweitert.</li></ul>`);
 
 /* ---------- STATS ---------- */
 let statMonth=new Date(today().getFullYear(),today().getMonth(),1);
@@ -1873,10 +1958,11 @@ function renderYear(h){
 }
 
 /* ---------- SETTINGS ---------- */
+let msOpen=false;   // Meilenstein-Schwellen sind standardmaessig eingeklappt
 const MS_FIELDS=[
-  ['stableMinDays','Stabil: dabei seit','Tage',7,120,1],
+  ['stableMinDays','Stabil: erledigte Tage','mindestens',7,120,1],
   ['stableWindow','Stabil: ohne Aussetzer','letzte Tage',3,60,1],
-  ['archiveMinDays','Archiv-reif: dabei seit','Tage',14,365,5],
+  ['archiveMinDays','Archiv-reif: erledigte Tage','mindestens',14,365,5],
   ['archiveWindow','Archiv-reif: Quote über','letzte Tage',7,120,1],
   ['archivePct','Archiv-reif: Quote mind.','%',50,100,5]];
 function renderSettings(){
@@ -1916,9 +2002,13 @@ function renderSettings(){
     </div>
 
     <div class="section-label">Meilensteine</div>
-    <div class="set-group">${msRows}</div>
+    <div class="set-group">
+      <div class="set-row tap" onclick="msOpen=!msOpen;renderSettings()"><div class="si"><svg viewBox="0 0 24 24"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg></div>
+        <div class="st"><div class="t">Erweitert</div><div class="d">Schwellen für Stabil und Archiv-reif</div></div>
+        <svg class="chev fold ${msOpen?'open':''}" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div>
+      ${msOpen?msRows:''}</div>
     <div class="set-note">Gilt für alle Gewohnheiten. <b>Stabil</b> heißt: Zeit für eine neue Gewohnheit. <b>Archiv-reif</b> heißt: Sie läuft von allein.
-      <button class="add-inline" style="display:inline;padding:0;margin-left:4px" onclick="resetMs()">Standard wiederherstellen</button></div>
+      ${msOpen?`<button class="add-inline" style="display:inline;padding:0;margin-left:4px" onclick="resetMs()">Standard wiederherstellen</button>`:''}</div>
 
     <div class="section-label">Sicherung</div>
     <div class="set-group">
