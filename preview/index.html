@@ -808,6 +808,12 @@ textarea.inp{resize:vertical;min-height:74px;line-height:1.45;font-size:16px}
    Schriften und Zustandsfarben kommen vom Original. Hilfs-Tokens beginnen mit --gl-.
    Akzente setzen nur die Palette (--l-* hell, --d-* dunkel); die drei Modus-Bloecke ordnen sie zu. */
 :root[data-style="glas"]{
+  /* Regler des Glas-Stils: 1 = Grundeinstellung. Varianten ([data-var]) setzen nur diese Werte, Schrift und Rundung. */
+  --v-gloss:1; --v-rim:1; --v-fill:1; --v-blur:1; --v-sat:175%; --v-blob:1; --v-drop:1; --v-edge:1;
+  --gl-field:radial-gradient(64% 46% at 4% 0%,var(--gl-b1),transparent 72%),
+    radial-gradient(58% 42% at 106% 28%,var(--gl-b2),transparent 72%),
+    radial-gradient(66% 42% at -8% 68%,var(--gl-b3),transparent 72%),
+    radial-gradient(72% 40% at 84% 104%,var(--gl-b4),transparent 72%);
   --l-bg:#d3e2d8; --l-b1:rgba(80,164,126,.66); --l-b2:rgba(250,190,104,.62); --l-b3:rgba(78,180,194,.62); --l-b4:rgba(160,206,100,.58);
   --l-accent:#3d7762; --l-soft:rgba(61,119,98,.15); --l-ink:#275647; --l-on:#fff; --l-sh:24,52,42;
   --d-bg:#0c1411; --d-b1:rgba(52,128,98,.52); --d-b2:rgba(128,98,48,.38); --d-b3:rgba(30,100,108,.46); --d-b4:rgba(70,110,50,.40);
@@ -829,32 +835,32 @@ textarea.inp{resize:vertical;min-height:74px;line-height:1.45;font-size:16px}
   --shadow-lg:0 2px 4px rgba(var(--gl-sh),.08),0 22px 44px -18px rgba(var(--gl-sh),.5);
   --rs:1.33;
 
-  --gl-fill-t:radial-gradient(150px 80px at 0% 0%,rgba(255,255,255,.5),transparent 72%),radial-gradient(180px 90px at 100% 100%,rgba(255,255,255,.4),transparent 72%),
-    linear-gradient(145deg,rgba(255,255,255,.36),rgba(255,255,255,.17) 50%,rgba(255,255,255,.28));
-  --gl-in-t:linear-gradient(145deg,rgba(255,255,255,.56),rgba(255,255,255,.3));
+  --gl-fill-t:radial-gradient(150px 80px at 0% 0%,rgba(255,255,255,calc(.5*var(--v-gloss))),transparent 72%),radial-gradient(180px 90px at 100% 100%,rgba(255,255,255,calc(.4*var(--v-gloss))),transparent 72%),
+    linear-gradient(145deg,rgba(255,255,255,calc(.36*var(--v-fill))),rgba(255,255,255,calc(.17*var(--v-fill))) 50%,rgba(255,255,255,calc(.28*var(--v-fill))));
+  --gl-in-t:linear-gradient(145deg,rgba(255,255,255,calc(.56*var(--v-fill))),rgba(255,255,255,calc(.3*var(--v-fill))));
   --gl-bar-t:linear-gradient(180deg,rgba(255,255,255,.56),rgba(255,255,255,.3));
   --gl-sheet-t:linear-gradient(170deg,rgba(255,255,255,.8),rgba(255,255,255,.62));
-  --gl-clear-t:linear-gradient(145deg,rgba(255,255,255,.74),rgba(255,255,255,.2));
+  --gl-clear-t:linear-gradient(145deg,rgba(255,255,255,calc(.74*var(--v-fill))),rgba(255,255,255,calc(.2*var(--v-fill))));
   --gl-solid:#f4f6f3; --gl-solid-hi:#fcfdfc;
   --gl-fill:var(--gl-fill-t); --gl-fill-in:var(--gl-in-t); --gl-bar:var(--gl-bar-t); --gl-sheet:var(--gl-sheet-t); --gl-clear:var(--gl-clear-t);
   --gl-bubble:linear-gradient(180deg,#fff,rgba(255,255,255,.74));
   --gl-input:rgba(255,255,255,.62);
-  --gl-sheen:linear-gradient(170deg,rgba(255,255,255,.5),rgba(255,255,255,0) 62%);
-  --gl-gloss:radial-gradient(130% 95% at 26% -4%,rgba(255,255,255,.6),rgba(255,255,255,0) 60%);
-  --gl-gloss-s:radial-gradient(130% 95% at 26% -4%,rgba(255,255,255,.3),rgba(255,255,255,0) 60%);
-  --gl-rim:inset 2px 2px 1.5px -1px #fff,inset -2px -2px 1.5px -1px rgba(255,255,255,.8),inset 0 0 0 1px rgba(255,255,255,.55),
-    inset 0 0 0 3px rgba(255,255,255,.15),inset 5px 7px 14px -7px rgba(255,255,255,.8),inset -5px -8px 14px -8px rgba(255,255,255,.62),
+  --gl-sheen:linear-gradient(170deg,rgba(255,255,255,calc(.5*var(--v-gloss))),rgba(255,255,255,calc(0*var(--v-gloss))) 62%);
+  --gl-gloss:radial-gradient(130% 95% at 26% -4%,rgba(255,255,255,calc(.6*var(--v-gloss))),rgba(255,255,255,calc(0*var(--v-gloss))) 60%);
+  --gl-gloss-s:radial-gradient(130% 95% at 26% -4%,rgba(255,255,255,calc(.3*var(--v-gloss))),rgba(255,255,255,calc(0*var(--v-gloss))) 60%);
+  --gl-rim:inset 2px 2px 1.5px -1px rgba(255,255,255,var(--v-rim)),inset -2px -2px 1.5px -1px rgba(255,255,255,calc(.8*var(--v-rim))),inset 0 0 0 1px rgba(255,255,255,calc(.55*var(--v-rim))),
+    inset 0 0 0 3px rgba(255,255,255,calc(.15*var(--v-rim))),inset 5px 7px 14px -7px rgba(255,255,255,calc(.8*var(--v-rim))),inset -5px -8px 14px -8px rgba(255,255,255,calc(.62*var(--v-rim))),
     inset 0 0 6px 2px rgba(var(--gl-sh),.09);
-  --gl-rim-s:inset 1px 1px 0 #fff,inset -1px -1px 0 rgba(255,255,255,.6),inset 0 0 0 1px rgba(255,255,255,.45),inset 0 -4px 6px -4px rgba(255,255,255,.6);
-  --gl-edge:0 0 0 .5px rgba(var(--gl-sh),.26);
+  --gl-rim-s:inset 1px 1px 0 rgba(255,255,255,var(--v-rim)),inset -1px -1px 0 rgba(255,255,255,calc(.6*var(--v-rim))),inset 0 0 0 1px rgba(255,255,255,calc(.45*var(--v-rim))),inset 0 -4px 6px -4px rgba(255,255,255,calc(.6*var(--v-rim)));
+  --gl-edge:0 0 0 .5px rgba(var(--gl-sh),calc(.26*var(--v-edge)));
   --gl-ring:rgba(var(--gl-sh),.24);
   --gl-bead:radial-gradient(circle at 34% 28%,#fff,rgba(255,255,255,.5) 70%);
-  --gl-drop:0 2px 3px -1px rgba(var(--gl-sh),.16),0 20px 36px -18px rgba(var(--gl-sh),.58);
-  --gl-drop-s:0 1px 2px rgba(var(--gl-sh),.14),0 6px 12px -6px rgba(var(--gl-sh),.42);
-  --gl-drop-l:0 2px 4px rgba(var(--gl-sh),.12),0 26px 50px -18px rgba(var(--gl-sh),.6);
+  --gl-drop:0 2px 3px -1px rgba(var(--gl-sh),calc(.16*var(--v-drop))),0 20px 36px -18px rgba(var(--gl-sh),calc(.58*var(--v-drop)));
+  --gl-drop-s:0 1px 2px rgba(var(--gl-sh),calc(.14*var(--v-drop))),0 6px 12px -6px rgba(var(--gl-sh),calc(.42*var(--v-drop)));
+  --gl-drop-l:0 2px 4px rgba(var(--gl-sh),calc(.12*var(--v-drop))),0 26px 50px -18px rgba(var(--gl-sh),calc(.6*var(--v-drop)));
   --gl-well:inset 0 1px 2px rgba(var(--gl-sh),.18),0 1px 0 rgba(255,255,255,.6);
   --gl-scrim:rgba(24,34,30,.28);
-  --gl-blur:blur(20px) saturate(175%); --gl-blur-l:blur(24px) saturate(180%); --gl-cs:light;
+  --gl-blur:blur(calc(20px*var(--v-blur))) saturate(var(--v-sat)); --gl-blur-l:blur(calc(24px*var(--v-blur))) saturate(var(--v-sat)); --gl-cs:light;
 }
 :root[data-style="glas"][data-theme="dark"]{
   --bg:var(--d-bg); --accent:var(--d-accent); --accent-soft:var(--d-soft); --accent-ink:var(--d-ink); --on-accent:var(--d-on);
@@ -865,26 +871,26 @@ textarea.inp{resize:vertical;min-height:74px;line-height:1.45;font-size:16px}
   --g-ink:#8fe0a6; --o-ink:#ffbe7a; --r-ink:#f29c91;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 16px -8px rgba(0,0,0,.6);
   --shadow-lg:0 2px 4px rgba(0,0,0,.3),0 22px 44px -16px rgba(0,0,0,.75);
-  --gl-fill-t:linear-gradient(145deg,rgba(255,255,255,.14),rgba(255,255,255,.055) 52%,rgba(255,255,255,.095));
-  --gl-in-t:linear-gradient(145deg,rgba(255,255,255,.11),rgba(255,255,255,.05));
+  --gl-fill-t:linear-gradient(145deg,rgba(255,255,255,calc(.14*var(--v-fill))),rgba(255,255,255,calc(.055*var(--v-fill))) 52%,rgba(255,255,255,calc(.095*var(--v-fill))));
+  --gl-in-t:linear-gradient(145deg,rgba(255,255,255,calc(.11*var(--v-fill))),rgba(255,255,255,calc(.05*var(--v-fill))));
   --gl-bar-t:linear-gradient(180deg,rgba(255,255,255,.17),rgba(255,255,255,.07)),rgba(var(--gl-sh),.55);
   --gl-sheet-t:linear-gradient(170deg,rgba(255,255,255,.13),rgba(255,255,255,.05)),rgba(var(--gl-sh),.76);
-  --gl-clear-t:linear-gradient(145deg,rgba(255,255,255,.24),rgba(255,255,255,.07));
+  --gl-clear-t:linear-gradient(145deg,rgba(255,255,255,calc(.24*var(--v-fill))),rgba(255,255,255,calc(.07*var(--v-fill))));
   --gl-solid:#1b211f; --gl-solid-hi:#262d2a;
   --gl-bubble:linear-gradient(180deg,rgba(255,255,255,.32),rgba(255,255,255,.15));
   --gl-input:rgba(0,0,0,.24);
-  --gl-sheen:linear-gradient(170deg,rgba(255,255,255,.14),rgba(255,255,255,0) 62%);
-  --gl-gloss:radial-gradient(130% 95% at 26% -4%,rgba(255,255,255,.42),rgba(255,255,255,0) 60%);
-  --gl-gloss-s:radial-gradient(130% 95% at 26% -4%,rgba(255,255,255,.3),rgba(255,255,255,0) 60%);
-  --gl-rim:inset 1px 1px 0 rgba(255,255,255,.44),inset -1px -1px 0 rgba(255,255,255,.15),inset 0 0 0 1px rgba(255,255,255,.07),
-    inset 0 12px 18px -12px rgba(255,255,255,.22),inset 0 -9px 14px -10px rgba(255,255,255,.09);
-  --gl-rim-s:inset 1px 1px 0 rgba(255,255,255,.42),inset -1px -1px 0 rgba(255,255,255,.13),inset 0 0 0 1px rgba(255,255,255,.07);
-  --gl-edge:0 0 0 .5px rgba(0,0,0,.6);
+  --gl-sheen:linear-gradient(170deg,rgba(255,255,255,calc(.14*var(--v-gloss))),rgba(255,255,255,calc(0*var(--v-gloss))) 62%);
+  --gl-gloss:radial-gradient(130% 95% at 26% -4%,rgba(255,255,255,calc(.42*var(--v-gloss))),rgba(255,255,255,calc(0*var(--v-gloss))) 60%);
+  --gl-gloss-s:radial-gradient(130% 95% at 26% -4%,rgba(255,255,255,calc(.3*var(--v-gloss))),rgba(255,255,255,calc(0*var(--v-gloss))) 60%);
+  --gl-rim:inset 1px 1px 0 rgba(255,255,255,calc(.44*var(--v-rim))),inset -1px -1px 0 rgba(255,255,255,calc(.15*var(--v-rim))),inset 0 0 0 1px rgba(255,255,255,calc(.07*var(--v-rim))),
+    inset 0 12px 18px -12px rgba(255,255,255,calc(.22*var(--v-rim))),inset 0 -9px 14px -10px rgba(255,255,255,calc(.09*var(--v-rim)));
+  --gl-rim-s:inset 1px 1px 0 rgba(255,255,255,calc(.42*var(--v-rim))),inset -1px -1px 0 rgba(255,255,255,calc(.13*var(--v-rim))),inset 0 0 0 1px rgba(255,255,255,calc(.07*var(--v-rim)));
+  --gl-edge:0 0 0 .5px rgba(0,0,0,calc(.6*var(--v-edge)));
   --gl-ring:rgba(255,255,255,.2);
   --gl-bead:radial-gradient(circle at 34% 28%,rgba(255,255,255,.8),rgba(255,255,255,.22) 70%);
-  --gl-drop:0 1px 2px rgba(0,0,0,.3),0 16px 32px -14px rgba(0,0,0,.65);
-  --gl-drop-s:0 1px 2px rgba(0,0,0,.3),0 5px 12px -5px rgba(0,0,0,.6);
-  --gl-drop-l:0 2px 4px rgba(0,0,0,.3),0 24px 48px -16px rgba(0,0,0,.8);
+  --gl-drop:0 1px 2px rgba(0,0,0,calc(.3*var(--v-drop))),0 16px 32px -14px rgba(0,0,0,calc(.65*var(--v-drop)));
+  --gl-drop-s:0 1px 2px rgba(0,0,0,calc(.3*var(--v-drop))),0 5px 12px -5px rgba(0,0,0,calc(.6*var(--v-drop)));
+  --gl-drop-l:0 2px 4px rgba(0,0,0,calc(.3*var(--v-drop))),0 24px 48px -16px rgba(0,0,0,calc(.8*var(--v-drop)));
   --gl-well:inset 0 1px 2px rgba(0,0,0,.4),0 1px 0 rgba(255,255,255,.08);
   --gl-scrim:rgba(0,0,0,.5); --gl-cs:dark;
 }
@@ -898,26 +904,26 @@ textarea.inp{resize:vertical;min-height:74px;line-height:1.45;font-size:16px}
     --g-ink:#8fe0a6; --o-ink:#ffbe7a; --r-ink:#f29c91;
     --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 16px -8px rgba(0,0,0,.6);
     --shadow-lg:0 2px 4px rgba(0,0,0,.3),0 22px 44px -16px rgba(0,0,0,.75);
-    --gl-fill-t:linear-gradient(145deg,rgba(255,255,255,.14),rgba(255,255,255,.055) 52%,rgba(255,255,255,.095));
-    --gl-in-t:linear-gradient(145deg,rgba(255,255,255,.11),rgba(255,255,255,.05));
+    --gl-fill-t:linear-gradient(145deg,rgba(255,255,255,calc(.14*var(--v-fill))),rgba(255,255,255,calc(.055*var(--v-fill))) 52%,rgba(255,255,255,calc(.095*var(--v-fill))));
+    --gl-in-t:linear-gradient(145deg,rgba(255,255,255,calc(.11*var(--v-fill))),rgba(255,255,255,calc(.05*var(--v-fill))));
     --gl-bar-t:linear-gradient(180deg,rgba(255,255,255,.17),rgba(255,255,255,.07)),rgba(var(--gl-sh),.55);
     --gl-sheet-t:linear-gradient(170deg,rgba(255,255,255,.13),rgba(255,255,255,.05)),rgba(var(--gl-sh),.76);
-    --gl-clear-t:linear-gradient(145deg,rgba(255,255,255,.24),rgba(255,255,255,.07));
+    --gl-clear-t:linear-gradient(145deg,rgba(255,255,255,calc(.24*var(--v-fill))),rgba(255,255,255,calc(.07*var(--v-fill))));
     --gl-solid:#1b211f; --gl-solid-hi:#262d2a;
     --gl-bubble:linear-gradient(180deg,rgba(255,255,255,.32),rgba(255,255,255,.15));
     --gl-input:rgba(0,0,0,.24);
-    --gl-sheen:linear-gradient(170deg,rgba(255,255,255,.14),rgba(255,255,255,0) 62%);
-    --gl-gloss:radial-gradient(130% 95% at 26% -4%,rgba(255,255,255,.42),rgba(255,255,255,0) 60%);
-    --gl-gloss-s:radial-gradient(130% 95% at 26% -4%,rgba(255,255,255,.3),rgba(255,255,255,0) 60%);
-    --gl-rim:inset 1px 1px 0 rgba(255,255,255,.44),inset -1px -1px 0 rgba(255,255,255,.15),inset 0 0 0 1px rgba(255,255,255,.07),
-      inset 0 12px 18px -12px rgba(255,255,255,.22),inset 0 -9px 14px -10px rgba(255,255,255,.09);
-    --gl-rim-s:inset 1px 1px 0 rgba(255,255,255,.42),inset -1px -1px 0 rgba(255,255,255,.13),inset 0 0 0 1px rgba(255,255,255,.07);
-    --gl-edge:0 0 0 .5px rgba(0,0,0,.6);
+    --gl-sheen:linear-gradient(170deg,rgba(255,255,255,calc(.14*var(--v-gloss))),rgba(255,255,255,calc(0*var(--v-gloss))) 62%);
+    --gl-gloss:radial-gradient(130% 95% at 26% -4%,rgba(255,255,255,calc(.42*var(--v-gloss))),rgba(255,255,255,calc(0*var(--v-gloss))) 60%);
+    --gl-gloss-s:radial-gradient(130% 95% at 26% -4%,rgba(255,255,255,calc(.3*var(--v-gloss))),rgba(255,255,255,calc(0*var(--v-gloss))) 60%);
+    --gl-rim:inset 1px 1px 0 rgba(255,255,255,calc(.44*var(--v-rim))),inset -1px -1px 0 rgba(255,255,255,calc(.15*var(--v-rim))),inset 0 0 0 1px rgba(255,255,255,calc(.07*var(--v-rim))),
+      inset 0 12px 18px -12px rgba(255,255,255,calc(.22*var(--v-rim))),inset 0 -9px 14px -10px rgba(255,255,255,calc(.09*var(--v-rim)));
+    --gl-rim-s:inset 1px 1px 0 rgba(255,255,255,calc(.42*var(--v-rim))),inset -1px -1px 0 rgba(255,255,255,calc(.13*var(--v-rim))),inset 0 0 0 1px rgba(255,255,255,calc(.07*var(--v-rim)));
+    --gl-edge:0 0 0 .5px rgba(0,0,0,calc(.6*var(--v-edge)));
     --gl-ring:rgba(255,255,255,.2);
     --gl-bead:radial-gradient(circle at 34% 28%,rgba(255,255,255,.8),rgba(255,255,255,.22) 70%);
-    --gl-drop:0 1px 2px rgba(0,0,0,.3),0 16px 32px -14px rgba(0,0,0,.65);
-    --gl-drop-s:0 1px 2px rgba(0,0,0,.3),0 5px 12px -5px rgba(0,0,0,.6);
-    --gl-drop-l:0 2px 4px rgba(0,0,0,.3),0 24px 48px -16px rgba(0,0,0,.8);
+    --gl-drop:0 1px 2px rgba(0,0,0,calc(.3*var(--v-drop))),0 16px 32px -14px rgba(0,0,0,calc(.65*var(--v-drop)));
+    --gl-drop-s:0 1px 2px rgba(0,0,0,calc(.3*var(--v-drop))),0 5px 12px -5px rgba(0,0,0,calc(.6*var(--v-drop)));
+    --gl-drop-l:0 2px 4px rgba(0,0,0,calc(.3*var(--v-drop))),0 24px 48px -16px rgba(0,0,0,calc(.8*var(--v-drop)));
     --gl-well:inset 0 1px 2px rgba(0,0,0,.4),0 1px 0 rgba(255,255,255,.08);
     --gl-scrim:rgba(0,0,0,.5); --gl-cs:dark;
   }
@@ -951,10 +957,7 @@ textarea.inp{resize:vertical;min-height:74px;line-height:1.45;font-size:16px}
 
 /* --- Grund: weiches Farbfeld im Ton des Akzents, am Bildschirm fixiert --- */
 :root[data-style="glas"] body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
-  background:radial-gradient(64% 46% at 4% 0%,var(--gl-b1),transparent 72%),
-    radial-gradient(58% 42% at 106% 28%,var(--gl-b2),transparent 72%),
-    radial-gradient(66% 42% at -8% 68%,var(--gl-b3),transparent 72%),
-    radial-gradient(72% 40% at 84% 104%,var(--gl-b4),transparent 72%)}
+  background:var(--gl-field);opacity:var(--v-blob)}
 /* oberer Rand: Inhalt verschwimmt unter der Statusleiste */
 :root[data-style="glas"] .app::before{content:"";position:fixed;top:0;left:0;right:0;z-index:30;pointer-events:none;
   height:calc(var(--safe-top) + 6px);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
@@ -996,7 +999,7 @@ textarea.inp{resize:vertical;min-height:74px;line-height:1.45;font-size:16px}
 :root[data-style="glas"] .tc-title{font-size:13px}
 :root[data-style="glas"] .tc-count{font-size:16px;color:var(--ink)}
 :root[data-style="glas"] .tc-bar{box-shadow:var(--gl-well)}
-:root[data-style="glas"] .tc-bar i{box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -2px 3px -1px rgba(0,0,0,.16)}
+:root[data-style="glas"] .tc-bar i{box-shadow:inset 0 1px 0 rgba(255,255,255,calc(.55*var(--v-gloss))),inset 0 -2px 3px -1px rgba(0,0,0,.16)}
 
 /* Heute-Liste */
 :root[data-style="glas"] .tlist{padding:2px 15px}
@@ -1016,23 +1019,23 @@ textarea.inp{resize:vertical;min-height:74px;line-height:1.45;font-size:16px}
 :root[data-style="glas"] .tstatus.o{background:var(--fill-o)}
 :root[data-style="glas"] .tstatus.r{background:var(--fill-r)}
 :root[data-style="glas"] .tstatus::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;
-  box-shadow:inset 1px 1px 0 rgba(255,255,255,.62),inset -1px -1px 0 rgba(255,255,255,.22),inset 0 -6px 8px -5px rgba(0,0,0,.24)}
+  box-shadow:inset 1px 1px 0 rgba(255,255,255,calc(.62*var(--v-gloss))),inset -1px -1px 0 rgba(255,255,255,calc(.22*var(--v-gloss))),inset 0 -6px 8px -5px rgba(0,0,0,.24)}
 :root[data-style="glas"] .tstatus:is(.g,.o,.r)::after,:root[data-style="glas"] .tstatus:has(i.g,i.o,i.r)::after{opacity:1}
 :root[data-style="glas"] .tstatus:is(.g,.o,.r),:root[data-style="glas"] .tstatus:has(i.g,i.o,i.r){box-shadow:0 0 0 .5px rgba(0,0,0,.2),var(--gl-drop-s)}
 :root[data-style="glas"] .tstatus i+i{border-left-color:rgba(255,255,255,.75)}
 :root[data-style="glas"] .tstatus i svg{filter:drop-shadow(0 1px 1px rgba(0,0,0,.28))}
-:root[data-style="glas"] :is(.choice .sw,.legend .sw,.grp-check.on,.cel-ico){box-shadow:inset 1px 1px 0 rgba(255,255,255,.55),inset 0 -4px 6px -4px rgba(0,0,0,.22)}
+:root[data-style="glas"] :is(.choice .sw,.legend .sw,.grp-check.on,.cel-ico){box-shadow:inset 1px 1px 0 rgba(255,255,255,calc(.55*var(--v-gloss))),inset 0 -4px 6px -4px rgba(0,0,0,.22)}
 
 /* Wochenstreifen unter dem Namen: sieben kleine Abhak-Kacheln */
 :root[data-style="glas"] .wk i{background:var(--gl-clear);border-radius:calc(4.5px*var(--rs));
-  box-shadow:inset 1px 1px 0 rgba(255,255,255,.8),inset 0 0 0 1px var(--gl-ring)}
+  box-shadow:inset 1px 1px 0 rgba(255,255,255,calc(.8*var(--v-gloss))),inset 0 0 0 1px var(--gl-ring)}
 :root[data-style="glas"] .wk i.g{background:var(--fill-g)}
 :root[data-style="glas"] .wk i.o{background:var(--fill-o)}
 :root[data-style="glas"] .wk i.r{background:var(--fill-r)}
-:root[data-style="glas"] .wk i:is(.g,.o,.r){box-shadow:inset 1px 1px 0 rgba(255,255,255,.55),inset 0 -3px 4px -3px rgba(0,0,0,.25),0 0 0 .5px rgba(0,0,0,.16)}
+:root[data-style="glas"] .wk i:is(.g,.o,.r){box-shadow:inset 1px 1px 0 rgba(255,255,255,calc(.55*var(--v-gloss))),inset 0 -3px 4px -3px rgba(0,0,0,.25),0 0 0 .5px rgba(0,0,0,.16)}
 :root[data-style="glas"] .wk i.off{background:var(--surface-2);box-shadow:none;opacity:.5}
-:root[data-style="glas"] .wk i.sel{box-shadow:inset 1px 1px 0 rgba(255,255,255,.8),0 0 0 1.5px var(--bg),0 0 0 3px var(--accent)}
-:root[data-style="glas"] .wk i.sel:is(.g,.o,.r){box-shadow:inset 1px 1px 0 rgba(255,255,255,.55),inset 0 -3px 4px -3px rgba(0,0,0,.25),0 0 0 1.5px var(--bg),0 0 0 3px var(--accent)}
+:root[data-style="glas"] .wk i.sel{box-shadow:inset 1px 1px 0 rgba(255,255,255,calc(.8*var(--v-gloss))),0 0 0 1.5px var(--bg),0 0 0 3px var(--accent)}
+:root[data-style="glas"] .wk i.sel:is(.g,.o,.r){box-shadow:inset 1px 1px 0 rgba(255,255,255,calc(.55*var(--v-gloss))),inset 0 -3px 4px -3px rgba(0,0,0,.25),0 0 0 1.5px var(--bg),0 0 0 3px var(--accent)}
 :root[data-style="glas"] .wk-head span{color:var(--muted)}
 :root[data-style="glas"] .wk-head span.sel{color:var(--accent-ink);font-weight:800}
 
@@ -1069,10 +1072,10 @@ textarea.inp{resize:vertical;min-height:74px;line-height:1.45;font-size:16px}
 :root[data-style="glas"] .chip{min-height:36px;padding:7px 14px;border:0;background:var(--gl-clear);color:var(--ink-soft);
   box-shadow:var(--gl-rim-s),var(--gl-edge),var(--gl-drop-s)}
 :root[data-style="glas"] .chip.sel{background:var(--gl-gloss-s),var(--accent);color:var(--on-accent);
-  box-shadow:inset 1px 1px 0 rgba(255,255,255,.5),inset -1px -1px 0 rgba(255,255,255,.18),var(--gl-edge),0 6px 14px -7px var(--accent)}
+  box-shadow:inset 1px 1px 0 rgba(255,255,255,calc(.5*var(--v-gloss))),inset -1px -1px 0 rgba(255,255,255,calc(.18*var(--v-gloss))),var(--gl-edge),0 6px 14px -7px var(--accent)}
 /* Knoepfe: primaer = Akzentglas, sekundaer = klares Glas */
 :root[data-style="glas"] :is(.primary,.toast.big){background:var(--gl-gloss-s),var(--accent);color:var(--on-accent);
-  box-shadow:inset 1px 1px 0 rgba(255,255,255,.5),inset -1px -1px 0 rgba(255,255,255,.2),inset 0 -8px 12px -8px rgba(0,0,0,.25),var(--gl-edge),0 10px 22px -10px var(--accent)}
+  box-shadow:inset 1px 1px 0 rgba(255,255,255,calc(.5*var(--v-gloss))),inset -1px -1px 0 rgba(255,255,255,calc(.2*var(--v-gloss))),inset 0 -8px 12px -8px rgba(0,0,0,.25),var(--gl-edge),0 10px 22px -10px var(--accent)}
 :root[data-style="glas"] .primary{min-height:52px;border-radius:calc(20px*var(--rs))}
 :root[data-style="glas"] :is(.ghost-btn,.bulk-btn,.clear-day,.add-btn){border:0;border-radius:calc(20px*var(--rs));background:var(--gl-clear);
   box-shadow:var(--gl-rim-s),var(--gl-edge),var(--gl-drop-s)}
@@ -1081,11 +1084,11 @@ textarea.inp{resize:vertical;min-height:74px;line-height:1.45;font-size:16px}
 :root[data-style="glas"] .add-btn{min-height:52px;color:var(--accent-ink);font-weight:700}
 :root[data-style="glas"] .add-btn:active{background:var(--gl-bubble)}
 :root[data-style="glas"] .bulk-btn.main{background:var(--fill-g);color:var(--on-fill);text-shadow:0 1px 1px rgba(0,0,0,.2);
-  box-shadow:inset 1px 1px 0 rgba(255,255,255,.55),inset 0 -8px 12px -8px rgba(0,0,0,.22),var(--gl-edge),var(--gl-drop-s)}
+  box-shadow:inset 1px 1px 0 rgba(255,255,255,calc(.55*var(--v-gloss))),inset 0 -8px 12px -8px rgba(0,0,0,.22),var(--gl-edge),var(--gl-drop-s)}
 :root[data-style="glas"] .recall-card .rc-btns button{min-height:44px;border-radius:calc(18px*var(--rs));background:var(--gl-clear);
   box-shadow:var(--gl-rim-s),var(--gl-edge),var(--gl-drop-s)}
 :root[data-style="glas"] .recall-card .rc-btns button.yes{background:var(--gl-gloss-s),var(--accent);color:var(--on-accent);
-  box-shadow:inset 1px 1px 0 rgba(255,255,255,.5),inset -1px -1px 0 rgba(255,255,255,.2),var(--gl-edge),0 8px 18px -9px var(--accent)}
+  box-shadow:inset 1px 1px 0 rgba(255,255,255,calc(.5*var(--v-gloss))),inset -1px -1px 0 rgba(255,255,255,calc(.2*var(--v-gloss))),var(--gl-edge),0 8px 18px -9px var(--accent)}
 /* kleine runde Glasknoepfe */
 :root[data-style="glas"] :is(.x-btn,.del,.idea-addbtn,.grp-check),:root[data-style="glas"] .stepper button,:root[data-style="glas"] .mini-step button,
 :root[data-style="glas"] .mnav button,:root[data-style="glas"] .idea-card .iact button,:root[data-style="glas"] .hd-help i{
@@ -1114,8 +1117,8 @@ textarea.inp{resize:vertical;min-height:74px;line-height:1.45;font-size:16px}
 /* Einstellungen */
 :root[data-style="glas"] .set-row .si{background:var(--gl-clear);box-shadow:var(--gl-rim-s),var(--gl-edge)}
 :root[data-style="glas"] .set-row .si.acc{background:var(--gl-sheen),var(--accent-soft)}
-:root[data-style="glas"] .acc-sw{background:var(--gl-gloss),var(--sw);box-shadow:inset 1px 1px 0 rgba(255,255,255,.55),inset 0 -4px 6px -4px rgba(0,0,0,.25),var(--gl-edge),var(--gl-drop-s)}
-:root[data-style="glas"] .acc-sw.sel{box-shadow:inset 1px 1px 0 rgba(255,255,255,.55),inset 0 -4px 6px -4px rgba(0,0,0,.25),0 0 0 2px var(--bg),0 0 0 4px var(--sw)}
+:root[data-style="glas"] .acc-sw{background:var(--gl-gloss),var(--sw);box-shadow:inset 1px 1px 0 rgba(255,255,255,calc(.55*var(--v-gloss))),inset 0 -4px 6px -4px rgba(0,0,0,.25),var(--gl-edge),var(--gl-drop-s)}
+:root[data-style="glas"] .acc-sw.sel{box-shadow:inset 1px 1px 0 rgba(255,255,255,calc(.55*var(--v-gloss))),inset 0 -4px 6px -4px rgba(0,0,0,.25),0 0 0 2px var(--bg),0 0 0 4px var(--sw)}
 
 /* --- Navigation: schwebende Glaskapsel, aktiver Reiter in eigener Glasblase --- */
 :root[data-style="glas"] .nav{padding:0 18px max(12px,calc(var(--safe-bottom) - 12px));background:none;pointer-events:none}
@@ -1152,6 +1155,37 @@ textarea.inp{resize:vertical;min-height:74px;line-height:1.45;font-size:16px}
   :root[data-style="glas"] .app::before{display:none}
 }
 
+
+/* --- Varianten des Glas-Stils (Auswahl in der Vorschau): nur Regler, Farbfeld, Rundung und Schrift --- */
+:root[data-style="glas"][data-var="2"]{--v-gloss:0.45; --v-rim:0.6}   /* Ruhig */
+:root[data-style="glas"][data-var="3"]{--v-gloss:0.12; --v-rim:0.4; --v-fill:1.5; --v-blur:1.3; --v-sat:140%}   /* Matt */
+:root[data-style="glas"][data-var="4"]{--v-gloss:0; --v-rim:0.35; --v-fill:2.1; --v-blur:1.6; --v-sat:120%; --v-blob:0.8; --font-display:"Manrope",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Milchglas */
+:root[data-style="glas"][data-var="5"]{--v-gloss:0.3; --v-rim:0.7; --v-fill:0.45; --v-blur:0.5; --v-sat:190%}   /* Klar */
+:root[data-style="glas"][data-var="6"]{--v-gloss:0; --v-rim:0.2; --v-fill:2.6; --v-blob:0.45; --v-drop:0.6; --rs:1.0; --font-display:"Newsreader",serif; --font-body:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Papier */
+:root[data-style="glas"][data-var="7"]{--v-gloss:0.25; --v-rim:0.5; --v-fill:1.2; --v-blob:0.7; --gl-field:linear-gradient(155deg,var(--gl-b1),transparent 46%),linear-gradient(335deg,var(--gl-b3),transparent 52%),linear-gradient(60deg,var(--gl-b2),transparent 40%); --font-display:"Fraunces",serif; --font-body:"Figtree",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Seide */
+:root[data-style="glas"][data-var="8"]{--v-gloss:0.2; --v-rim:0.45; --v-fill:1.3; --gl-field:linear-gradient(180deg,var(--gl-b1),transparent 42%),linear-gradient(0deg,var(--gl-b4),transparent 38%); --font-display:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Horizont */
+:root[data-style="glas"][data-var="9"]{--v-gloss:0.35; --v-rim:0.55; --v-fill:0.9; --v-blob:1.15; --v-sat:200%; --gl-field:radial-gradient(120% 28% at 50% 12%,var(--gl-b1),transparent 70%),radial-gradient(120% 26% at 30% 46%,var(--gl-b3),transparent 70%),radial-gradient(120% 26% at 70% 80%,var(--gl-b2),transparent 70%); --font-display:"Outfit",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:"Outfit",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Aurora */
+:root[data-style="glas"][data-var="10"]{--v-gloss:0.1; --v-rim:0.3; --v-fill:1.7; --v-blur:1.8; --v-blob:0.5; --v-drop:0.5; --font-display:"DM Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:"DM Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Nebel */
+:root[data-style="glas"][data-var="11"]{--v-gloss:0; --v-rim:0.25; --v-edge:2.2; --v-fill:1.4; --v-drop:0.35; --rs:0.85; --font-display:"Space Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Kante */
+:root[data-style="glas"][data-var="12"]{--v-gloss:0.2; --v-rim:0.45; --v-fill:1.5; --v-drop:1.2; --rs:1.6; --font-display:"Nunito",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:"Nunito",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Weich */
+:root[data-style="glas"][data-var="13"]{--v-gloss:0; --v-rim:0.3; --v-fill:1.9; --v-blob:0.3; --v-drop:0.45; --rs:1.1; --font-display:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Schlicht */
+:root[data-style="glas"][data-var="14"]{--v-gloss:0.12; --v-rim:0.4; --v-fill:1.6; --v-blob:0.55; --rs:1.0; --font-display:"Playfair Display",serif; --font-body:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Editorial */
+:root[data-style="glas"][data-var="15"]{--v-gloss:0.2; --v-rim:0.5; --v-fill:0.8; --v-drop:1.6; --v-blur:1.2; --font-display:"Sora",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:"Sora",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Tiefe */
+:root[data-style="glas"][data-var="16"]{--v-gloss:0.55; --v-rim:0.8; --v-fill:1.6; --v-blob:0.6; --v-sat:130%; --gl-field:radial-gradient(130% 50% at 50% -10%,var(--gl-b3),transparent 70%),radial-gradient(90% 40% at 100% 100%,var(--gl-b2),transparent 72%); --font-display:"Lora",serif}   /* Perle */
+:root[data-style="glas"][data-var="17"]{--v-gloss:0.15; --v-rim:0.35; --v-fill:0.7; --v-blob:1.3; --v-sat:210%; --font-display:"Bricolage Grotesque",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Tinte */
+:root[data-style="glas"][data-var="18"]{--v-gloss:0.3; --v-rim:0.55; --v-fill:1.25; --rs:1.15; --font-display:"Urbanist",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:"Urbanist",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Rund */
+:root[data-style="glas"][data-var="19"]{--v-gloss:0.1; --v-rim:0.45; --v-fill:1.35; --v-blob:0.9; --gl-field:radial-gradient(90% 60% at 12% 0%,var(--gl-b1),transparent 70%); --font-display:"Geist",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:"Geist",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Studio */
+:root[data-style="glas"][data-var="20"]{--v-gloss:0.3; --v-rim:0.5; --v-fill:1.45; --v-blur:1.4; --v-blob:0.65; --v-drop:0.7}   /* Sanft */
+/* serifenlose Ueberschriften brauchen mehr Gewicht als die Serifenschrift */
+:root[data-dsans] :is(.head h1,.tghead .tname .n,.sheet-head h2,.empty h2,.mnav h2,.cel-card h2){font-weight:700;letter-spacing:-.02em}
+:root[data-dsans] :is(.tc-count,.hd-figs b,.st-fig .n,.st-big .n,.stepper .val,.hs .n,.arch-sum b,.arch-card .ap,.stat-card .sh .pct){font-weight:600}
+/* Varianten-Leiste der Vorschau */
+.pv-var{position:fixed;top:calc(var(--safe-top) + 5px);left:50%;transform:translateX(-50%);z-index:45;display:flex;align-items:center;gap:2px;
+  padding:3px;border-radius:999px;background:rgba(22,26,24,.86);color:#fff;font:600 12px/1 system-ui,-apple-system,sans-serif;box-shadow:0 4px 14px -4px rgba(0,0,0,.5)}
+.pv-var button{width:34px;height:30px;border-radius:999px;color:#fff;font-size:17px;line-height:1;display:grid;place-items:center}
+.pv-var button:active{background:rgba(255,255,255,.18)}
+.pv-var span{min-width:104px;text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums}
+:root.pv-on .head{margin-top:34px}
 </style>
 </head>
 <body>
@@ -2879,7 +2913,7 @@ function previewDemo(){
     ideas:[{id:'di1',text:'Direkt nach dem Essen abspülen',note:'',prio:'high'},{id:'di2',text:'Handy nicht ins Bett',note:'',prio:'high'},
       {id:'di3',text:'Abends lesen',note:'',prio:'mid'}],
     groups:[{id:'dg1',name:'Lernen',icon:'brain',habitIds:['d6','d7'],collapsed:false}]});
-  S.settings.theme=st.theme;S.settings.style=st.style;S.settings.accent=st.accent;
+  S.settings.theme=st.theme;S.settings.style=st.style;S.settings.accent=st.accent;S.settings.variant=st.variant;
   save();location.reload();
 }
 function cycleTheme(){const o=['system','light','dark'];S.settings.theme=o[(o.indexOf(S.settings.theme)+1)%3];save();applyTheme();
@@ -3095,9 +3129,20 @@ const STYLES=[['glas','Glas'],['original','Klassisch']];
 const ACCENTS=[['salbei','Salbei'],['ozean','Ozean'],['flieder','Flieder'],['sand','Sand'],['rose','Rosé']];
 function styleName(){return S.settings.style==='original'?'original':'glas';}
 function accentName(){const a=S.settings.accent;return ACCENTS.some(x=>x[0]===a)?a:'salbei';}
-function applyStyle(){const s=styleName(),root=document.documentElement;
+/* Varianten des Glas-Stils zum Aussuchen (Regler stehen im CSS unter [data-var]); 1 = Grundeinstellung */
+const VARIANTS=['Glas','Ruhig','Matt','Milchglas','Klar','Papier','Seide','Horizont','Aurora','Nebel','Kante','Weich','Schlicht','Editorial','Tiefe','Perle','Tinte','Rund','Studio','Sanft'];
+const VAR_DSANS=[4,8,9,10,11,12,13,15,17,18,19];          // Varianten mit serifenloser Ueberschrift
+const VAR_FONTS='https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Figtree:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Bricolage+Grotesque:wght@400;500;600;700&family=Urbanist:wght@400;500;600;700&family=Geist:wght@400;500;600;700&family=Newsreader:wght@400;500;600&family=Playfair+Display:wght@400;500;600&family=Lora:wght@400;500;600&display=swap';
+function variantNo(){const v=+S.settings.variant||1;return v>=1&&v<=VARIANTS.length?v:1;}
+function loadVariantFonts(){if(document.getElementById('varFonts'))return;
+  const l=document.createElement('link');l.id='varFonts';l.rel='stylesheet';l.href=VAR_FONTS;document.head.appendChild(l);}
+function setVariant(n){const N=VARIANTS.length;S.settings.variant=((n-1)%N+N)%N+1;save();applyStyle();updateVariantBar();}
+function updateVariantBar(){const el=document.getElementById('pvVarLbl');if(el)el.textContent=variantNo()+' · '+VARIANTS[variantNo()-1];}
+function applyStyle(){const s=styleName(),root=document.documentElement,v=variantNo();
   if(s==='original'){root.removeAttribute('data-style');root.removeAttribute('data-accent');}
   else{root.setAttribute('data-style',s);root.setAttribute('data-accent',accentName());}
+  if(s!=='original'&&v>1){root.setAttribute('data-var',v);loadVariantFonts();}else root.removeAttribute('data-var');
+  if(s!=='original'&&VAR_DSANS.includes(v))root.setAttribute('data-dsans','');else root.removeAttribute('data-dsans');
   syncThemeColor();}
 // theme-color (steht im Deploy-Wrapper): in Klassisch unveraendert lassen, in Glas auf die Grundfarbe des Farbfelds setzen
 function syncThemeColor(){const metas=document.querySelectorAll('meta[name="theme-color"]');if(!metas.length)return;
@@ -3128,7 +3173,10 @@ function toast(msg,big){toastEl.textContent=msg;toastEl.className='toast show'+(
 /* ---------- Init ---------- */
 function renderAll(){renderTrack();document.getElementById('viewSub').textContent=titles.track[1]();}
 applyStyle();applyTheme();renderAll();staggerIn('track');
-if(PREVIEW){const b=document.createElement('div');b.className='pv-badge';b.textContent='Vorschau';document.body.appendChild(b);}
+if(PREVIEW){   // Vorschau: Leiste zum Durchblaettern der Design-Varianten
+  const b=document.createElement('div');b.className='pv-var';
+  b.innerHTML='<button onclick="setVariant(variantNo()-1)" aria-label="Vorherige Variante">‹</button><span id="pvVarLbl"></span><button onclick="setVariant(variantNo()+1)" aria-label="Nächste Variante">›</button>';
+  document.body.appendChild(b);document.documentElement.classList.add('pv-on');updateVariantBar();}
 clearNotifs();pushStatus();
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'){clearNotifs();pushStatus();}else pushStatus(true);});
