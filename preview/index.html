@@ -1843,22 +1843,42 @@ function stepDay(n){dayOffset+=n;wkAnim=trackView==='week'?(n<0?'prev':'next'):'
 function jumpToday(){const n=dayOffset;dayOffset=0;wkAnim=trackView==='week'&&n?(n<0?'next':'prev'):'';renderTrack();}
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
-function dayBlend(g,o,r){
+/* ---------- Mischfarbe eines Tages ----------
+   Gruen, Orange und Rot werden nach ihrem Anteil gemischt (im OKLCH-Farbraum: Helligkeit, Saettigung
+   und Farbton gewichtet gemittelt). So bleibt die Mischung kraeftig und wandert sichtbar von Gruen
+   ueber Gelb/Orange nach Rot, statt braun zu werden. */
+const MIX_PAL={original:{g:['#93e3a4','#53bd75'],o:['#ffc47a','#f4964a'],r:['#dd8175','#c25b4f']},
+  glas:{g:['#6bd389','#38a660'],o:['#ffb561','#ec8636'],r:['#e07b6f','#bb4f44']}};
+function hex2lch(hex){
+  const f=i=>{const v=parseInt(hex.substr(i,2),16)/255;return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4);};
+  const r=f(1),g=f(3),b=f(5);
+  const l=Math.cbrt(.4122214708*r+.5363325363*g+.0514459929*b),m=Math.cbrt(.2119034982*r+.6806995451*g+.1073969566*b),s=Math.cbrt(.0883024619*r+.2817188376*g+.6299787005*b);
+  const L=.2104542553*l+.793617785*m-.0040720468*s,A=1.9779984951*l-2.428592205*m+.4505937099*s,B=.0259040371*l+.7827717662*m-.8086757660*s;
+  return [L,Math.hypot(A,B),Math.atan2(B,A)];
+}
+function lch2hex(L,C,H){
+  const A=C*Math.cos(H),B=C*Math.sin(H);
+  const l=Math.pow(L+.3963377774*A+.2158037573*B,3),m=Math.pow(L-.1055613458*A-.0638541728*B,3),s=Math.pow(L-.0894841775*A-1.291485548*B,3);
+  const t=v=>{v=Math.min(1,Math.max(0,v));v=v<=.0031308?12.92*v:1.055*Math.pow(v,1/2.4)-.055;return Math.round(v*255).toString(16).padStart(2,'0');};
+  return '#'+t(4.0767416621*l-3.3077115913*m+.2309699292*s)+t(-1.2684380046*l+2.6097574011*m-.3413193965*s)+t(-.0041960863*l-.7034186147*m+1.707614701*s);
+}
+// Helles und dunkles Ende der Mischfarbe. Je gemischter der Tag, desto etwas heller und weicher -
+// sonst kippen die Gelb- und Gruengelb-Toene ins Olive.
+function mixPair(p,w){
+  const sum=w[0]+w[1]+w[2],keys=['g','o','r'];
+  const pure=keys.find((k,i)=>w[i]===sum);if(pure)return p[pure];
+  let L=0,C=0,H=0,L2=0,C2=0;
+  keys.forEach((k,i)=>{if(!w[i])return;const q=w[i]/sum,x=hex2lch(p[k][0]),y=hex2lch(p[k][1]);
+    L+=x[0]*q;C+=x[1]*q;H+=x[2]*q;L2+=y[0]*q;C2+=y[1]*q;});
+  const mixed=1-Math.max(w[0],w[1],w[2])/sum;       // 0 = einfarbig, 2/3 = alles gleich stark
+  return [lch2hex(L+.09*mixed,C,H),lch2hex(L2+.15*mixed,Math.min(C2,C*1.05)*(1-.375*mixed),H)];
+}
+// Hintergrund fuer einen Tag mit g gruenen, o orangen, r roten Eintraegen. bar: flacher Verlauf fuer den Balken
+function dayMix(g,o,r,bar){
   if(!(g+o+r))return '';
-  // Each tracked status contributes its own light->dark band, laid out
-  // green -> orange -> red. Orange is always part of the transition: when a
-  // day has green and red but no orange, a small orange bridge is inserted
-  // between them so the gradient flows through orange instead of jumping.
-  const seq=[];
-  if(g)seq.push(['var(--g1)','var(--g2)',g]);
-  if(o)seq.push(['var(--o1)','var(--o2)',o]);
-  else if(g&&r)seq.push(['var(--o1)','var(--o2)',Math.max(1,(g+r)/5)]);
-  if(r)seq.push(['var(--r1)','var(--r2)',r]);
-  const total=seq.reduce((s,x)=>s+x[2],0);
-  let acc=0;const stops=[];
-  seq.forEach(([c1,c2,n])=>{const s0=(acc/total*100).toFixed(1),s1=((acc+n)/total*100).toFixed(1);
-    stops.push(c1+' '+s0+'%');stops.push(c2+' '+s1+'%');acc+=n;});
-  return 'linear-gradient(90deg,'+stops.join(',')+')';
+  const glas=styleName()==='glas',c=mixPair(MIX_PAL[glas?'glas':'original'],[g,o,r]);
+  if(bar)return `linear-gradient(90deg,${c[0]},${c[1]})`;
+  return (glas?'var(--gl-gloss),':'')+`linear-gradient(${glas?160:150}deg,${c[0]},${c[1]})`;
 }
 // Wieviel ist an einem Tag schon entschieden? Basis fuer "Dein Tag" und fuer die
 // Rueckmeldung an den Push-Server (stuendliche Nacherinnerung).
@@ -1878,7 +1898,7 @@ function todayCardHTML(){
   if(total===0)return `<div class="today-card"><div class="tc-head"><span class="tc-title">Dein Tag</span></div>
     <div class="tc-empty">Für heute ist nichts geplant. Genieß den Tag.</div></div>`;
   const pct=(tracked/total*100);
-  const blend=dayBlend(g,o,r);
+  const blend=dayMix(g,o,r,true);
   return `<div class="today-card">
     <div class="tc-head"><span class="tc-title">Dein Tag</span><span class="tc-count">${tracked}/${total}</span></div>
     <div class="tc-bar"><i style="width:${pct}%;background:${blend||'var(--surface-2)'}"></i></div></div>`;
@@ -2676,7 +2696,8 @@ function renderStats(){
   const legend=`<div class="legend stat-legend">
     <div><span class="sw" style="background:var(--fill-g)"></span>Erledigt</div>
     <div><span class="sw" style="background:var(--fill-o)"></span>Entschuldigt</div>
-    <div><span class="sw" style="background:var(--fill-r)"></span>Nicht</div></div>`;
+    <div><span class="sw" style="background:var(--fill-r)"></span>Nicht</div>
+    <div><span class="sw" style="background:linear-gradient(90deg,var(--g2),var(--o2),var(--r2))"></span>Gemischt</div></div>`;
   let html=`<div class="filter-chips">${chips}</div>`;
   if(!sel){
     html+=`<div class="st-list">`+activeHabits().map(h=>{const q=quoteInfo(h),s=serieInfo(h);
@@ -2697,9 +2718,10 @@ function renderStats(){
   }
   el.innerHTML=html;
 }
-function monthAgg(habits,date){let anyR=false,anyG=false,anyO=false,any=false;
-  habits.forEach(h=>{const st=dayFull(h,date);if(st){any=true;if(st==='r')anyR=true;else if(st==='g')anyG=true;else anyO=true;}});
-  if(!any)return undefined;if(anyG)return 'g';if(anyR)return 'r';if(anyO)return 'o';}
+// Eintraege eines Tages ueber alle gezeigten Gewohnheiten (je Situation) - Grundlage der Mischfarbe im Kalender
+function monthMix(habits,date){let g=0,o=0,r=0;
+  habits.forEach(h=>h.situations.forEach(x=>{const v=getE(h.id,x.id,date);if(v==='g')g++;else if(v==='o')o++;else if(v==='r')r++;}));
+  return {g,o,r,any:g+o+r>0,top:g>=o&&g>=r?'g':o>=r?'o':'r'};}
 function renderMonth(calHabit){
   const habits=calHabit?[calHabit]:activeHabits();
   const y=statMonth.getFullYear(),m=statMonth.getMonth();
@@ -2707,8 +2729,8 @@ function renderMonth(calHabit){
   const cur=new Date(today().getFullYear(),today().getMonth(),1);const tStr=todayStr();
   let cells='';DAYS_SHORT.forEach(dd=>cells+=`<div class="cd">${dd[0]}</div>`);
   for(let i=0;i<startBlank;i++)cells+=`<div class="mc empty"></div>`;
-  for(let dn=1;dn<=days;dn++){const date=ds(new Date(y,m,dn));const st=monthAgg(habits,date);const isT=date===tStr;
-    cells+=`<div class="mc ${st?'filled':''} ${isT?'tdy':''}">${st?`<div class="sg ${st}"></div>`:''}<div class="num">${dn}</div></div>`;}
+  for(let dn=1;dn<=days;dn++){const date=ds(new Date(y,m,dn));const mx=monthMix(habits,date);const isT=date===tStr;
+    cells+=`<div class="mc ${mx.any?'filled':''} ${isT?'tdy':''}">${mx.any?`<div class="sg ${mx.top}" style="background:${dayMix(mx.g,mx.o,mx.r)}"></div>`:''}<div class="num">${dn}</div></div>`;}
   const canNext=new Date(y,m,1)<cur;
   return `<div class="mnav">
     <button onclick="statMonth=new Date(${y},${m-1},1);renderStats()"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
