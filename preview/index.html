@@ -361,6 +361,25 @@ svg{display:block}
 .sit-row{margin-bottom:14px}
 .sit-row .sn{font-size:14px;font-weight:700;margin-bottom:8px}
 .choices{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.choices.one{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}
+/* Fenster-Gewohnheiten: Stand im Tagesblatt, Liste der letzten Fenster im Detail */
+.win-cue{font-size:13px;color:var(--ink-soft);font-weight:600;margin:-6px 0 12px}
+.win-box{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px 14px;margin-bottom:14px}
+.win-k{font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:3px}
+.win-t{font-size:15px;font-weight:700;margin-bottom:4px}
+.win-box .clear-day{margin-top:8px}
+.win-box .bulk-btn.main{margin-top:8px}
+.win-list{padding-bottom:6px}
+.win-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.win-row>i{flex:none;width:10px;height:10px;border-radius:50%;background:var(--surface-3)}
+.win-row.ok>i{background:var(--fill-g)}
+.win-row.miss>i{background:var(--fill-r)}
+.win-row.open>i{background:transparent;box-shadow:inset 0 0 0 2px var(--accent)}
+.win-row .wr-t{flex:1;min-width:0}
+.win-row .wr-t b{display:block;font-size:13.5px;font-weight:700}
+.win-row .wr-t span{display:block;font-size:11.5px;color:var(--muted);font-weight:600;margin-top:1px}
+.win-row.skip .wr-t b{color:var(--muted)}
+.win-row button{flex:none;min-height:36px;padding:0 12px;border-radius:calc(11px*var(--rs));background:var(--surface-2);color:var(--ink-soft);font-size:12px;font-weight:700}
 .choice{padding:13px 6px 11px;border-radius:calc(14px*var(--rs));border:1.5px solid var(--line);background:var(--surface);
   display:flex;flex-direction:column;align-items:center;gap:7px;
   transition:transform .22s cubic-bezier(.34,1.6,.5,1),background .18s,border-color .18s}
@@ -1243,8 +1262,18 @@ function load(){try{let raw=localStorage.getItem(KEY);
   if(raw)return Object.assign({},DEFAULT,JSON.parse(raw));}catch(e){}return JSON.parse(JSON.stringify(DEFAULT));}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}markDirty();queueStatus();}
 function uid(){return 'i'+(S.nextId++);}
+/* Fenster-Gewohnheiten (nicht an einen Tag gebunden): Stabil = WIN_STABLE Fenster hintereinander geschafft,
+   Archiv-reif = WIN_OK der letzten WIN_N. Woerter: Einzahl, Mehrzahl, Mehrzahl im Dativ. */
+const WIN_STABLE=3,WIN_N=8,WIN_OK=7;
+const WIN_WORD={weekly:['Woche','Wochen','Wochen'],biweekly:['Doppelwoche','Doppelwochen','Doppelwochen'],
+  monthly:['Monat','Monate','Monaten'],event:['Mal','Male','Malen']};
 function migrate(){
   S.habits.forEach(h=>{
+    if(h.biTarget==null)h.biTarget=1;
+    if(h.eventDays==null)h.eventDays=3;
+    if(!Array.isArray(h.events))h.events=[];
+    if(!h.skips||typeof h.skips!=='object')h.skips={};
+    if(h.cue==null)h.cue='';
     if(!h.icon)h.icon=EMOJI_MAP[h.emoji]||'leaf';
     if(!h.schedule)h.schedule='daily';
     if(h.schedule==='weekly'&&h.weeklyTarget==null)h.weeklyTarget=3;
@@ -1352,8 +1381,136 @@ function dueOnDate(h,d){
   if(h.schedule==='daily')return true;
   if(h.schedule==='weekdays')return h.weekdays.includes(wd(d));
   if(h.schedule==='everyN')return isSchedDay(h,d);
-  return false; // weekly/monthly are flexible, not a fixed daily duty
+  const n=winNow(h,d);return !!(n&&n.tight);   // Fenster: erst Pflicht, wenn es eng wird
 }
+// Zaehlt die Gewohnheit an diesem Tag mit (Gruppenfeld, "Alles erledigt")?
+// Fenster-Gewohnheiten nur, wenn es eng ist oder an dem Tag schon etwas eingetragen wurde.
+function countsOn(h,d){return isWin(h)?(dueOnDate(h,d)||dayFull(h,ds(d))!==undefined):isSchedDay(h,d);}
+
+/* ---------- Fenster: Zeitraum (Woche / 2 Wochen / Monat) und Anlass ----------
+   Ein Fenster hat Start, Ende und ein Soll (wie oft). Zeitraeume oeffnen sich von selbst,
+   einen Anlass oeffnet der Nutzer ("steht an"). Fuer alle gilt dasselbe: sichtbar ab Beginn,
+   Pflicht erst, wenn die fehlenden Male die restlichen Tage aufbrauchen, verfehlt erst nach
+   dem Ende, ausgesetzte Fenster zaehlen nicht (auch rueckwirkend). */
+function isWin(h){return !!WIN_WORD[h.schedule];}
+function winTarget(h){const t=h.schedule==='weekly'?h.weeklyTarget:h.schedule==='biweekly'?h.biTarget:h.schedule==='monthly'?h.monthlyTarget:1;
+  return Math.max(1,t||1);}
+function day0(d){return new Date(d.getFullYear(),d.getMonth(),d.getDate());}
+function dayDiff(a,b){return Math.round((day0(a)-day0(b))/86400000);}
+// Stichtag: heute, bei archivierten Gewohnheiten der Tag der Archivierung (danach laeuft nichts mehr auf)
+function winRef(h){return day0(h.archived&&h.archivedAt?parse(h.archivedAt):today());}
+// Fenster, in dem der Tag d liegt: {key,start,end} - oder null (Anlass: gerade keins offen)
+function winAt(h,d){
+  d=day0(d);
+  if(h.schedule==='weekly'){const st=mondayOf(d);return {key:ds(st),start:st,end:addDays(st,6)};}
+  if(h.schedule==='biweekly'){const a=mondayOf(parse(h.startDate||todayStr()));
+    const st=addDays(a,Math.floor(dayDiff(d,a)/14)*14);return {key:ds(st),start:st,end:addDays(st,13)};}
+  if(h.schedule==='monthly'){const st=new Date(d.getFullYear(),d.getMonth(),1);
+    return {key:ds(st),start:st,end:new Date(d.getFullYear(),d.getMonth()+1,0)};}
+  if(h.schedule==='event'){const k=ds(d);
+    for(const e of (h.events||[])){const st=parse(e.start),en=addDays(st,Math.max(1,e.days||1)-1);
+      if(e.start<=k&&k<=ds(en))return {key:e.start,start:st,end:en};}}
+  return null;
+}
+function winGreens(h,w){let c=0;for(let d=new Date(w.start);d<=w.end;d=addDays(d,1))if(dayFull(h,ds(d))==='g')c++;return c;}
+// 'skip' ausgesetzt · 'ok' Soll erreicht · 'miss' vorbei und verfehlt · 'open' laeuft noch
+function winState(h,w){
+  if(h.skips&&h.skips[w.key])return 'skip';
+  if(winGreens(h,w)>=winTarget(h))return 'ok';
+  return w.end<winRef(h)?'miss':'open';}
+// Fenster bis zum Stichtag, neuestes zuerst
+function winList(h,max){
+  const out=[],t=winRef(h),first=habitStart(h);max=max||60;
+  if(h.schedule==='event'){
+    (h.events||[]).slice().sort((a,b)=>b.start.localeCompare(a.start)).forEach(e=>{
+      if(e.start<=ds(t)&&out.length<max){const w=winAt(h,parse(e.start));if(w)out.push(w);}});
+    return out;}
+  let w=winAt(h,t);
+  while(w&&out.length<max&&w.end>=first){out.push(w);w=winAt(h,addDays(w.start,-1));}
+  return out;
+}
+// Gewertete Fenster, neuestes zuerst ('ok' | 'miss'). Ausgesetzte, das noch laufende und ein
+// angebrochenes Startfenster ohne Erfolg bleiben draussen.
+function winEval(h){const first=habitStart(h);
+  return winList(h).map(w=>{const st=winState(h,w);
+    return st==='ok'?'ok':(st==='miss'&&w.start>=first)?'miss':null;}).filter(Boolean);}
+function winRun(h){let n=0;for(const x of winEval(h)){if(x==='ok')n++;else break;}return n;}
+// Serie nach "nie zweimal auslassen", gezaehlt in Fenstern
+function winStreak(h){let n=0,miss=0;for(const x of winEval(h)){if(x==='ok'){n++;miss=0;}else if(++miss>=2)break;}return n;}
+// Stand im Fenster am Tag d: Soll, geschafft, was fehlt, wie viele Tage bleiben, ist es eng?
+function winNow(h,d){
+  if(!isWin(h))return null;
+  d=day0(d||today());const w=winAt(h,d);if(!w)return null;
+  const target=winTarget(h),done=winGreens(h,w),st=winState(h,w);
+  const free=dayFull(h,ds(d))===undefined?1:0;      // an diesem Tag ist noch nichts eingetragen
+  const daysLeft=dayDiff(w.end,d);
+  const missing=Math.max(0,target-done);
+  return {w,target,done,missing,st,daysLeft,tight:st==='open'&&free===1&&missing>=daysLeft+1};
+}
+function winRestText(n){return n.daysLeft===0?'letzter Tag':`noch ${n.daysLeft+1} Tage`;}
+// Zeile unter dem Namen in der Tagesliste
+function winMetaHTML(h,dStr){
+  const n=winNow(h,parse(dStr));
+  if(!n)return '<span class="sit">Steht gerade nicht an</span>';
+  const cnt=`${n.done}/${n.target}`;
+  if(n.st==='skip')return '<span class="sit">Ausgesetzt</span>';
+  if(n.st==='ok')return `<span class="sit">${cnt} geschafft</span>`;
+  if(n.st==='miss')return `<span class="sit">${cnt} · verfehlt</span>`;
+  if(n.tight)return `<span class="warn">${cnt} · ${n.daysLeft===0?'heute letzter Tag':'wird eng, '+winRestText(n)}</span>`;
+  return `<span class="sit">${cnt} · ${winRestText(n)}${h.cue&&h.cue.trim()?' · '+esc(h.cue):''}</span>`;
+}
+const WIN_SKIP_LABEL={weekly:'Diese Woche aussetzen',biweekly:'Diesen Zeitraum aussetzen',monthly:'Diesen Monat aussetzen',event:'Dieses Mal aussetzen'};
+// Block im Tagesblatt: Stand des Fensters, Aussetzen, bei Anlass "steht an"
+function winSheetHTML(h,date){
+  const n=winNow(h,parse(date));
+  const cue=h.cue&&h.cue.trim()?`<div class="win-cue">${esc(h.cue)}</div>`:'';
+  if(!n)return cue+`<div class="win-box"><div class="win-t">Steht gerade nicht an.</div>
+      <button class="bulk-btn main" onclick="eventOpen('${h.id}','${date}')">Steht jetzt an · ${h.eventDays} ${tageWort(h.eventDays)} Zeit</button>
+      <div class="hint" style="margin-top:9px">Schon gemacht? Dann einfach unten „Erledigt" antippen.</div></div>`;
+  const txt={skip:'Ausgesetzt – zählt nicht mit.',ok:`Geschafft: ${n.done} von ${n.target}.`,miss:`Verfehlt: ${n.done} von ${n.target}.`,
+    open:`${n.done} von ${n.target} · ${winRestText(n)}`}[n.st];
+  return cue+`<div class="win-box"><div class="win-k">${fmtShort(n.w.start)} – ${fmtShort(n.w.end)}</div><div class="win-t">${txt}</div>
+    ${h.schedule==='event'&&n.st==='ok'?`<button class="clear-day" onclick="eventAgain('${h.id}','${date}')">Steht schon wieder an</button>`:''}
+    ${h.schedule==='event'&&n.done===0&&n.st!=='skip'?`<button class="clear-day" onclick="eventRemove('${h.id}','${n.w.key}','${date}')">Stand doch nicht an</button>`:''}
+    <button class="clear-day" onclick="winSkip('${h.id}','${n.w.key}','${date}')">${n.st==='skip'?'Aussetzen zurücknehmen':WIN_SKIP_LABEL[h.schedule]}</button></div>`;
+}
+// Liste der letzten Fenster im Detail-Blatt, jedes laesst sich (auch rueckwirkend) aussetzen
+function winListHTML(h){
+  const ws=winList(h,6),t=winTarget(h),ev=h.schedule==='event';
+  if(!ws.length)return ev?'<div class="hd-goal">Noch nichts eingetragen. Tippe in der Liste auf das Feld, sobald es ansteht.</div>':'';
+  return `<div class="hd-card win-list"><div class="hd-head"><span>${ev?'Letzte Male':'Letzte Zeiträume'}</span></div>`+ws.map(w=>{
+    const st=winState(h,w),g=winGreens(h,w);
+    const lab={ok:'geschafft',miss:'verfehlt',open:'läuft',skip:'ausgesetzt'}[st];
+    return `<div class="win-row ${st}"><i></i><div class="wr-t"><b>${fmtShort(w.start)} – ${fmtShort(w.end)}</b><span>${st==='skip'?lab:g+'/'+t+' · '+lab}</span></div>
+      <button onclick="winSkip('${h.id}','${w.key}')">${st==='skip'?'Zählt wieder':'Aussetzen'}</button></div>`;}).join('')+'</div>';
+}
+// Aussetzen an/aus. `date` gesetzt: aus dem Tagesblatt heraus, sonst aus dem Detail-Blatt
+function winSkip(hid,key,date){const h=S.habits.find(x=>x.id===hid);if(!h)return;
+  if(!h.skips)h.skips={};
+  const on=!h.skips[key];if(on)h.skips[key]=true;else delete h.skips[key];
+  save();renderTrack();if(activeView()==='stats')renderStats();
+  if(date)openDay(hid,date);else renderHabitSheet(hid);
+  toast(on?'Ausgesetzt – zählt nicht mit':'Zählt wieder');maybeCelebrate(h);}
+// neues Anlass-Fenster ab `date`; endet spaetestens vor dem naechsten schon eingetragenen
+function eventAdd(h,date){
+  if(!Array.isArray(h.events))h.events=[];
+  let days=Math.max(1,h.eventDays||3);
+  h.events.forEach(e=>{if(e.start>date)days=Math.min(days,dayDiff(parse(e.start),parse(date)));});
+  h.events.push({start:date,days:Math.max(1,days)});h.events.sort((a,b)=>a.start.localeCompare(b.start));}
+function eventOpen(hid,date){const h=S.habits.find(x=>x.id===hid);if(!h||winAt(h,parse(date)))return;
+  eventAdd(h,date);save();renderTrack();openDay(hid,date);toast('Steht an');}
+// Anlass kommt wieder, waehrend die alte Frist noch laeuft: altes Fenster endet am letzten erledigten Tag
+function eventAgain(hid,date){const h=S.habits.find(x=>x.id===hid);if(!h)return;
+  const w=winAt(h,parse(date));if(!w){eventOpen(hid,date);return;}
+  let last=null;for(let d=new Date(w.start);d<=w.end;d=addDays(d,1))if(dayFull(h,ds(d))==='g')last=d;
+  if(!last)return;
+  const e=h.events.find(x=>x.start===w.key);if(!e)return;
+  e.days=dayDiff(last,w.start)+1;
+  const next=ds(addDays(last,1)),st=next>date?next:date;
+  eventAdd(h,st);save();renderTrack();openDay(hid,date);toast(st>date?'Ab morgen wieder offen':'Steht wieder an');}
+function eventRemove(hid,key,date){const h=S.habits.find(x=>x.id===hid);if(!h)return;
+  h.events=(h.events||[]).filter(e=>e.start!==key);if(h.skips)delete h.skips[key];
+  save();renderTrack();openDay(hid,date);toast('Zurückgenommen');}
 function dueToday(h){return dueOnDate(h,today());}
 
 /* ---------- Streak / progress ---------- */
@@ -1388,7 +1545,7 @@ function streak(h){
 }
 // Letzter geplanter Tag vor heute verpasst und heute noch nicht erledigt -> "nicht zweimal!"
 function streakAtRisk(h){
-  if(h.schedule==='weekly'||h.schedule==='monthly')return false;
+  if(isWin(h))return false;
   const tStr=todayStr();const stT=dayFull(h,tStr);
   if(isSchedDay(h,today())&&(stT==='g'||stT==='o'))return false;
   const start=habitStart(h);let d=addDays(today(),-1);
@@ -1398,47 +1555,10 @@ function streakAtRisk(h){
   }
   return false;
 }
-function weekGreens(h,mon){mon=mon||mondayOf(today());let c=0;for(let i=0;i<7;i++)if(dayFull(h,ds(addDays(mon,i)))==='g')c++;return c;}
-function monthGreens(h,d){const y=d.getFullYear(),m=d.getMonth(),days=new Date(y,m+1,0).getDate();let c=0;
-  for(let i=1;i<=days;i++)if(dayFull(h,ds(new Date(y,m,i)))==='g')c++;return c;}
-// Consecutive weeks/months in which the frequency target was reached.
-function weekMet(h,mon){return weekGreens(h,mon)>=h.weeklyTarget;}
-// Wochen/Monate: eine verfehlte Periode wird toleriert, zwei in Folge brechen die Serie.
-// Die laufende Periode zaehlt nur, wenn sie schon erfuellt ist.
-function weekStreak(h){let mon=mondayOf(today());if(!weekMet(h,mon))mon=addDays(mon,-7);
-  const first=mondayOf(habitStart(h));let n=0,miss=0;
-  for(let i=0;i<300&&mon>=first;i++){if(weekMet(h,mon)){n++;miss=0;}else if(++miss>=2)break;mon=addDays(mon,-7);}
-  return n;}
-function monthMet(h,d){return monthGreens(h,d)>=h.monthlyTarget;}
-function monthStreak(h){let d=new Date(today().getFullYear(),today().getMonth(),1);
-  if(!monthMet(h,d))d=new Date(d.getFullYear(),d.getMonth()-1,1);
-  const s=habitStart(h);const first=new Date(s.getFullYear(),s.getMonth(),1);let n=0,miss=0;
-  for(let i=0;i<160&&d>=first;i++){if(monthMet(h,d)){n++;miss=0;}else if(++miss>=2)break;d=new Date(d.getFullYear(),d.getMonth()-1,1);}
-  return n;}
-
 /* ---------- Meilensteine: Stabil / Archiv-reif ---------- */
-// Perioden der letzten `days` Tage, neueste zuerst: 'ok' | 'miss' | 'skip' (entschuldigt/heute offen).
-// Tages-Rhythmen: geplante Tage; X pro Woche/Monat: abgeschlossene (oder schon erfuellte) Wochen/Monate.
-function recentPeriods(h,days){
-  const start=habitStart(h);const out=[];
-  if(h.schedule==='weekly'){
-    let mon=mondayOf(today());if(!weekMet(h,mon))mon=addDays(mon,-7);
-    for(let i=0;i<Math.ceil(days/7);i++){
-      if(addDays(mon,6)<start)break;
-      const met=weekMet(h,mon);if(!met&&mon<start)break;   // angebrochene Startwoche nicht als Fehler werten
-      out.push(met?'ok':'miss');mon=addDays(mon,-7);}
-    return out;
-  }
-  if(h.schedule==='monthly'){
-    let d=new Date(today().getFullYear(),today().getMonth(),1);if(!monthMet(h,d))d=new Date(d.getFullYear(),d.getMonth()-1,1);
-    for(let i=0;i<Math.max(1,Math.round(days/30));i++){
-      if(new Date(d.getFullYear(),d.getMonth()+1,0)<start)break;
-      const met=monthMet(h,d);if(!met&&d<start)break;
-      out.push(met?'ok':'miss');d=new Date(d.getFullYear(),d.getMonth()-1,1);}
-    return out;
-  }
-  return windowDays(h,days).map(x=>x.st);
-}
+// Geplante Tage der letzten `days` Tage, neueste zuerst: 'ok' | 'miss' | 'skip' (entschuldigt/heute offen).
+// Nur fuer Tages-Rhythmen; Fenster-Gewohnheiten werten winEval() aus.
+function recentPeriods(h,days){return windowDays(h,days).map(x=>x.st);}
 // Geplante Tage der letzten `days` Tage, neueste zuerst, mit Abstand zu heute
 function windowDays(h,days){
   const start=habitStart(h),out=[];let d=today();const tStr=todayStr();
@@ -1449,10 +1569,15 @@ function windowDays(h,days){
   }
   return out;
 }
-function stableInfo(h){const c=S.settings;const p=recentPeriods(h,c.stableWindow);
+function stableInfo(h){
+  if(isWin(h)){const run=winRun(h);return {win:true,days:habitAge(h),run,need:WIN_STABLE,clean:run>=WIN_STABLE,met:run>=WIN_STABLE};}
+  const c=S.settings;const p=recentPeriods(h,c.stableWindow);
   const clean=!p.includes('miss')&&p.includes('ok');const days=habitAge(h);
   return {days,minDays:c.stableMinDays,window:c.stableWindow,clean,met:days>=c.stableMinDays&&clean};}
-function archiveInfo(h){const c=S.settings;const p=recentPeriods(h,c.archiveWindow);
+function archiveInfo(h){
+  if(isWin(h)){const ev=winEval(h).slice(0,WIN_N),ok=ev.filter(x=>x==='ok').length;
+    return {win:true,days:habitAge(h),n:ev.length,ok,window:WIN_N,rate:ev.length?Math.round(ok/ev.length*100):0,met:ev.length>=WIN_N&&ok>=WIN_OK};}
+  const c=S.settings;const p=recentPeriods(h,c.archiveWindow);
   const ok=p.filter(x=>x==='ok').length,miss=p.filter(x=>x==='miss').length;
   const rate=(ok+miss)?Math.round(ok/(ok+miss)*100):0;const days=habitAge(h);
   return {days,minDays:c.archiveMinDays,window:c.archiveWindow,pct:c.archivePct,rate,
@@ -1484,15 +1609,6 @@ function statusBadge(h){const s=habitStatus(h);
    stehen in stableInfo()/archiveInfo() und bleiben unveraendert. */
 // Fruehestens in wie vielen Tagen ein Fenster-Kriterium erfuellt ist, wenn ab jetzt nichts mehr ausfaellt
 function daysUntilWindow(h,days,test){
-  const unit=h.schedule==='weekly'?7:h.schedule==='monthly'?30:1;
-  if(unit>1){
-    const len=unit===7?Math.ceil(days/7):Math.max(1,Math.round(days/30));
-    const p=recentPeriods(h,days);
-    for(let n=1;n<=len;n++){let ok=n,miss=0;
-      p.forEach((st,i)=>{if(i+n<len){if(st==='ok')ok++;else if(st==='miss')miss++;}});
-      if(test(ok,miss))return n*unit;}
-    return len*unit;
-  }
   const w=windowDays(h,days);
   const openToday=w.length&&w[0].ago===0&&w[0].st==='skip'&&dayFull(h,todayStr())!=='o';
   for(let n=1;n<=days;n++){let ok=openToday?1:0,miss=0;
@@ -1506,6 +1622,7 @@ function inTagen(n){return n===1?'in 1 Tag':`in ${n} Tagen`;}
 // Die Fuellung folgt dem Alter und laeuft nie rueckwaerts; sie ueberschreitet aber keine Marke,
 // deren zweite Bedingung offen ist - der gesperrte Teil erscheint blass (ghost).
 function fortschritt(h){
+  if(isWin(h))return fortschrittWin(h);
   const c=S.settings,s=stableInfo(h),a=archiveInfo(h),age=s.days;
   const mark=Math.min(.8,c.stableMinDays/c.archiveMinDays);
   const ageFrac=Math.min(1,age/c.archiveMinDays);
@@ -1525,6 +1642,23 @@ function fortschritt(h){
   const text=`Stabil ${inTagen(left)}`+(needClean>needAge?' ohne Lücke':'');
   return Object.assign(base,{phase:'build',fill:Math.min(ageFrac,mark),ghost:ageFrac,left,text});
 }
+// Dasselbe fuer Fenster-Gewohnheiten: die Skala sind WIN_N gewertete Fenster, die Marke liegt bei WIN_STABLE
+function fortschrittWin(h){
+  const ev=winEval(h),s=stableInfo(h),a=archiveInfo(h),w=WIN_WORD[h.schedule];
+  const mark=WIN_STABLE/WIN_N,frac=Math.min(1,ev.length/WIN_N);
+  const unitDays=h.schedule==='weekly'?7:h.schedule==='biweekly'?14:h.schedule==='monthly'?30:Math.max(1,h.eventDays||3);
+  const adj=h.schedule==='event'?'weiteren':'erfüllten';
+  const nach=k=>`nach ${k} ${adj} ${k===1?w[0]:w[2]}`;
+  const base={mark,rate:a.rate,age:s.days,stableOn:s.met||a.met,archiveOn:a.met};
+  if(a.met)return Object.assign(base,{phase:'archive',fill:1,ghost:1,left:0,text:'Archiv-reif'});
+  if(s.met){
+    let k=1;for(;k<WIN_N;k++){const arr=Array(k).fill('ok').concat(ev).slice(0,WIN_N);
+      if(arr.length>=WIN_N&&arr.filter(x=>x==='ok').length>=WIN_OK)break;}
+    return Object.assign(base,{phase:'stable',fill:Math.max(mark,Math.min(frac,1-k/WIN_N)),ghost:frac,left:k*unitDays,text:`Archiv-reif ${nach(k)}`});
+  }
+  const k=Math.max(1,WIN_STABLE-s.run);
+  return Object.assign(base,{phase:'build',fill:Math.min(frac,mark),ghost:frac,left:k*unitDays,text:`Stabil ${nach(k)}`});
+}
 // Der Pfad als Balken. opt.text: Satz darunter · opt.big: mit Beschriftung der Marken (Detail)
 function pfadHTML(h,opt){
   opt=opt||{};const f=fortschritt(h);const pc=x=>(Math.round(x*1000)/10)+'%';
@@ -1535,27 +1669,29 @@ function pfadHTML(h,opt){
     ${opt.text?`<div class="pf-text">${f.text}</div>`:''}</div>`;
 }
 // Die Regel hinter dem Pfad in zwei Saetzen (fuer das "?" im Detail)
-function pfadRegelHTML(){const c=S.settings;
+function pfadRegelHTML(h){const c=S.settings;
+  if(h&&isWin(h)){const w=WIN_WORD[h.schedule];
+    return `<b>Stabil:</b> ${WIN_STABLE} ${w[1]} hintereinander geschafft. Dann ist Platz für eine neue Gewohnheit.<br>
+    <b>Archiv-reif:</b> ${WIN_OK} der letzten ${WIN_N} ${w[1]} geschafft. Dann läuft sie von allein.<br>
+    Ausgesetzte ${w[1]} zählen nicht mit.`;}
   return `<b>Stabil:</b> seit mindestens ${c.stableMinDays} Tagen dabei und die letzten ${c.stableWindow} Tage ohne Aussetzer. Dann ist Platz für eine neue Gewohnheit.<br>
     <b>Archiv-reif:</b> seit mindestens ${c.archiveMinDays} Tagen dabei und mindestens ${c.archivePct} % in den letzten ${c.archiveWindow} Tagen. Dann läuft sie von allein.<br>
     Entschuldigte Tage zählen nicht als Aussetzer.`;}
 // Serie nach "nie zweimal auslassen", passend zum Rhythmus beschriftet
 function serieInfo(h){const n=goalCurrent(h);
-  const unit=h.schedule==='weekly'?(n===1?'Woche':'Wochen'):h.schedule==='monthly'?(n===1?'Monat':'Monate'):tageWort(n);
+  const w=WIN_WORD[h.schedule];const unit=w?(n===1?w[0]:w[1]):tageWort(n);
   return {n,unit,label:unit+' am Stück'};}
 // Quote im Archiv-Fenster (Standard 30 Tage), entschuldigte Tage ausgenommen
-function quoteInfo(h){const a=archiveInfo(h);return {pct:a.rate,window:a.window,label:`Quote · ${a.window} Tage`};}
+function quoteInfo(h){const a=archiveInfo(h);
+  return {pct:a.rate,window:a.window,label:a.win?`Quote · letzte ${WIN_N} ${WIN_WORD[h.schedule][1]}`:`Quote · ${a.window} Tage`};}
 
 // End-goal (milestone): "N periods in a row", period = day / week / month by rhythm.
 function goalCurrent(h){
-  if(h.schedule==='weekly')return weekStreak(h);
-  if(h.schedule==='monthly')return monthStreak(h);
-  return streak(h);
+  return isWin(h)?winStreak(h):streak(h);
 }
 function goalUnit(h){
-  if(h.schedule==='weekly')return h.goalN===1?'Woche in Folge':'Wochen in Folge';
-  if(h.schedule==='monthly')return h.goalN===1?'Monat in Folge':'Monate in Folge';
-  return 'Tage am Stück';
+  const w=WIN_WORD[h.schedule];
+  return w?(h.goalN===1?w[0]:w[1])+' in Folge':'Tage am Stück';
 }
 function goalMet(h){return !!(h.goalEnabled&&h.goalN>0&&goalCurrent(h)>=h.goalN);}
 function goalProgress(h){if(!h.goalEnabled||!h.goalN)return null;return {cur:goalCurrent(h),total:h.goalN,unit:goalUnit(h)};}
@@ -1564,13 +1700,14 @@ function goalText(h){
   if(h.schedule==='everyN')base=h.interval<=1?'Jeden Tag':('Alle '+h.interval+' Tage');
   else if(h.schedule==='weekly')base=`${h.weeklyTarget}× pro Woche`;
   else if(h.schedule==='monthly')base=`${h.monthlyTarget}× pro Monat`;
+  else if(h.schedule==='biweekly')base=`${h.biTarget}× in 2 Wochen`;
+  else if(h.schedule==='event')base=`Wenn es ansteht · ${h.eventDays} ${tageWort(h.eventDays)} Zeit`;
   else if(h.schedule==='weekdays')base=h.weekdays.length===7?'Jeden Tag':h.weekdays.slice().sort((a,b)=>a-b).map(i=>DAYS_SHORT[i]).join('·');
   else base='Jeden Tag';
   return base+(h.situations.length>1?` · ${h.situations.length} Situationen`:'');
 }
 function chipData(h){
-  if(h.schedule==='weekly'){const g=weekGreens(h);return{txt:g+'/'+h.weeklyTarget,on:g>=h.weeklyTarget,icon:g>=h.weeklyTarget?'check':'week'};}
-  if(h.schedule==='monthly'){const g=monthGreens(h,today());return{txt:g+'/'+h.monthlyTarget,on:g>=h.monthlyTarget,icon:g>=h.monthlyTarget?'check':'week'};}
+  if(isWin(h)){const n=winNow(h),g=n?n.done:0,t=winTarget(h);return{txt:g+'/'+t,on:g>=t,icon:g>=t?'check':'week'};}
   const st=streak(h);return{txt:st+(st===1?' Tag':' Tage'),on:st>0,icon:'flame'};
 }
 const CHIPICON={
@@ -1616,7 +1753,8 @@ function nextCelebration(){
       <button class="danger-btn" onclick="nextCelebration()">Später</button>`;
   }else{
     const a=archiveInfo(h);kicker='Meilenstein';title='Archiv-reif!';
-    text=`<b>${esc(h.name)}</b> läuft von allein – seit ${a.days} Tagen dabei und ${a.rate}&nbsp;% in den letzten ${a.window} Tagen. Du kannst sie jetzt archivieren.`;
+    text=a.win?`<b>${esc(h.name)}</b> läuft von allein – ${a.ok} der letzten ${a.n} ${WIN_WORD[h.schedule][1]} geschafft. Du kannst sie jetzt archivieren.`
+      :`<b>${esc(h.name)}</b> läuft von allein – seit ${a.days} Tagen dabei und ${a.rate}&nbsp;% in den letzten ${a.window} Tagen. Du kannst sie jetzt archivieren.`;
     btns=`<button class="primary" onclick="archiveHabit('${h.id}');nextCelebration()">Archivieren</button>${later}`;
   }
   document.getElementById('celCard').innerHTML=`
@@ -1723,7 +1861,7 @@ function dayCounts(dStr){
   const d=parse(dStr);let total=0,tracked=0,g=0,o=0,r=0;
   activeHabits().forEach(h=>{const due=dueOnDate(h,d);
     h.situations.forEach(s=>{const v=getE(h.id,s.id,dStr);
-      if(!due&&!v)return;              // flexible habit (Woche/Monat) not tracked that day → ignore
+      if(!due&&!v)return;              // nicht faellig (auch: Fenster noch nicht eng) und nichts eingetragen -> zaehlt nicht
       total++;
       if(v){tracked++;if(v==='g')g++;else if(v==='o')o++;else r++;}});});
   return {total,tracked,g,o,r};
@@ -1798,7 +1936,8 @@ function wkStripHTML(h,dStr){
     const d=addDays(vd,-i),date=ds(d);
     const st=dayFull(h,date);
     const res=st==='g'||st==='o'||st==='r'?st:'';
-    const off=date>tStr||(!res&&(date<start||!isSchedDay(h,d)));
+    const wn=isWin(h)?winNow(h,d):null;
+    const off=date>tStr||(!res&&(date<start||!isSchedDay(h,d)||(isWin(h)&&(!wn||wn.st==='skip'))));
     tiles+=`<i class="${res} ${off?'off':''} ${i===0?'sel':''}"></i>`;
   }
   return `<div class="wk${wkAnimCls()}" aria-hidden="true">${tiles}</div>`;
@@ -1820,7 +1959,7 @@ function todayHabitRowHTML(h,dStr,dis,sub,isToday){
   const segs=h.situations.map(s=>{const v=getE(h.id,s.id,dStr)||'';
     return `<i class="${v}">${single&&SIGN[v]?`<svg viewBox="0 0 24 24" aria-hidden="true">${SIGN[v]}</svg>`:''}</i>`;}).join('');
   const warn=isToday&&streak(h)>0&&streakAtRisk(h);
-  const meta=warn?'<span class="warn">Nicht zweimal auslassen!</span>':
+  const meta=isWin(h)?winMetaHTML(h,dStr):warn?'<span class="warn">Nicht zweimal auslassen!</span>':
       (h.situations.length>1?`<span class="sit">${h.situations.map(s=>esc(s.name)).join(' · ')}</span>`:'');
   return `<div class="trow ${sub?'sub':''}">
     <button class="trow-open" onclick="openHabit('${h.id}')" aria-label="${esc(h.name)} ansehen">
@@ -1845,18 +1984,19 @@ function renderHabitSheet(hid){const h=S.habits.find(x=>x.id===hid);if(!h)return
   const ready=f.phase==='archive';
   document.getElementById('sheetTitle').textContent=h.name;
   document.getElementById('sheetBody').innerHTML=`
-    <div class="hd-rhythm">${esc(goalText(h))}</div>
+    <div class="hd-rhythm">${esc(goalText(h))}${isWin(h)&&h.cue&&h.cue.trim()?`<br>${esc(h.cue)}`:''}</div>
     <div class="hd-card">
       <div class="hd-head"><span>Fortschritt</span>
         <button class="hd-help ${habitHelpOpen?'on':''}" onclick="toggleHabitHelp('${h.id}')" aria-label="Erklärung ${habitHelpOpen?'ausblenden':'anzeigen'}" aria-expanded="${habitHelpOpen}"><i>?</i></button></div>
       ${pfadHTML(h,{big:true,text:true})}
-      ${habitHelpOpen?`<p class="hd-rule">${pfadRegelHTML()}</p>`:''}
+      ${habitHelpOpen?`<p class="hd-rule">${pfadRegelHTML(h)}</p>`:''}
     </div>
     <div class="hd-figs">
       <div><b>${q.pct} %</b><span>${q.label}</span></div>
       <div><b>${sr.n}</b><span>${sr.label}</span>${risk?'<em class="hd-warn">Nicht zweimal auslassen!</em>':''}</div>
     </div>
     ${gp?`<div class="hd-goal">Eigenes Ziel: ${gp.cur} von ${gp.total}</div>`:''}
+    ${isWin(h)?winListHTML(h):''}
     ${h.note&&h.note.trim()?`<div class="field"><label>${noteLabel(h.note)}</label><div class="note-box rich">${noteHTML(h.note)}</div></div>`:''}
     ${renderYear(h)}
     ${ready?`<div class="hd-ready">Diese Gewohnheit läuft von allein. Du kannst sie ins Archiv legen.</div>
@@ -1869,15 +2009,15 @@ function todayListHTML(dStr,viewDate,now){
   const isToday=dStr===todayStr();
   const dis=isFuture?'disabled':'';
   const week=trackView==='week';
-  // Woche: alle aktiven Gewohnheiten (auch X-mal pro Woche/Monat), Heute: nur faellige oder schon angetippte
-  const shown=h=>week||dueOnDate(h,viewDate)||h.situations.some(s=>getE(h.id,s.id,dStr)!==undefined);
+  // Woche: alle aktiven Gewohnheiten. Heute: faellige, schon angetippte und alle Fenster-Gewohnheiten
+  // (die stehen ab Fensterbeginn in der Liste, zaehlen aber erst zu "Dein Tag", wenn es eng wird)
+  const shown=h=>week||isWin(h)||dueOnDate(h,viewDate)||h.situations.some(s=>getE(h.id,s.id,dStr)!==undefined);
   const head=week?wkHeadHTML(dStr):'';
   let rows='',cards='';
   S.groups.forEach(g=>{
-    const {due}=groupDayCounts(g,dStr);
-    if(!due&&!(week&&groupHabits(g).length))return;
+    if(!groupHabits(g).some(shown))return;
     // Gruppenfeld: ein Segment je faelliger Gewohnheit, ohne Zahlen
-    const segs=groupHabits(g).filter(h=>isSchedDay(h,parse(dStr))).map(h=>{
+    const segs=groupHabits(g).filter(h=>countsOn(h,parse(dStr))).map(h=>{
       const st=dayFull(h,dStr);return `<i class="${st==='g'||st==='o'||st==='r'?st:''}"></i>`;}).join('');
     // jede Gruppe ist eine eigene Karte mit farbig abgesetzter Kopfzeile
     cards+=`<div class="tlist tgroup ${g.collapsed?'closed':''}"><div class="trow tghead">
@@ -1908,7 +2048,7 @@ function todayListHTML(dStr,viewDate,now){
 function groupDayCounts(g,date){
   let due=0,done=0;
   groupHabits(g).forEach(h=>{
-    if(!isSchedDay(h,parse(date)))return;
+    if(!countsOn(h,parse(date)))return;
     due++;const st=dayFull(h,date);if(st==='g'||st==='o')done++;
   });
   return {due,done};
@@ -1925,7 +2065,7 @@ function quickCheckGroup(gid){
     g.lastQuick=null;save();renderTrack();toast('Zurückgenommen');return;
   }
   groupHabits(g).forEach(h=>{
-    if(!isSchedDay(h,today()))return;
+    if(!countsOn(h,today()))return;
     h.situations.forEach(s=>{
       if(getE(h.id,s.id,date)===undefined){setE(h.id,s.id,date,'g');touched.push({hid:h.id,sid:s.id});}
     });
@@ -1949,7 +2089,7 @@ function openGroupDay(gid,date){
   const hs=groupHabits(g);
   if(!hs.length)body+=`<div class="hint" style="margin-top:14px">Diese Gruppe enthält noch keine Gewohnheiten.</div>`;
   hs.forEach(h=>{
-    const off=!isSchedDay(h,parse(date));
+    const off=!countsOn(h,parse(date));
     h.situations.forEach(s=>{
       const v=getE(h.id,s.id,date);
       const label=h.situations.length>1?`${esc(h.name)} · ${esc(s.name)}`:esc(h.name);
@@ -1962,7 +2102,7 @@ function openGroupDay(gid,date){
 function bulkSet(gid,date,val){
   const g=S.groups.find(x=>x.id===gid);if(!g)return;
   groupHabits(g).forEach(h=>{
-    if(val!==null&&!isSchedDay(h,parse(date)))return;   // skip members not due that day
+    if(val!==null&&!countsOn(h,parse(date)))return;   // skip members not due that day
     h.situations.forEach(s=>setE(h.id,s.id,date,val||undefined));
   });
   if(val==='g')g.lastQuick=null;                        // manual bulk supersedes the quick-tap undo
@@ -2030,10 +2170,12 @@ function openDay(hid,date){
   document.getElementById('sheetTitle').textContent=h.name;
   const d=parse(date);
   let body=`<div class="de-date">${fmtLong(d)}</div>`;
+  const win=isWin(h);if(win)body+=winSheetHTML(h,date);
+  // Fenster-Gewohnheiten kennen am einzelnen Tag nur "Erledigt" - ob das Fenster zaehlt, regelt "Aussetzen"
   h.situations.forEach(s=>{const v=getE(hid,s.id,date);
     body+=`<div class="sit-row">${h.situations.length>1?`<div class="sn">${esc(s.name)}</div>`:''}
-      <div class="choices">
-        ${cBtn('r','Nicht',v,hid,s.id,date)}${cBtn('o','Entschuldigt',v,hid,s.id,date)}${cBtn('g','Erledigt',v,hid,s.id,date)}
+      <div class="choices${win?' one':''}">
+        ${win&&v!=='r'&&v!=='o'?'':cBtn('r','Nicht',v,hid,s.id,date)+cBtn('o','Entschuldigt',v,hid,s.id,date)}${cBtn('g','Erledigt',v,hid,s.id,date)}
       </div></div>`;});
   body+=`<button class="clear-day" onclick="clearDay()">Eintrag zurücksetzen</button>`;
   document.getElementById('sheetBody').innerHTML=body;showSheet();
@@ -2045,6 +2187,9 @@ function cBtn(val,label,cur,hid,sid,date){
 }
 function pick(hid,sid,date,val,btn){
   const cur=getE(hid,sid,date);
+  const hh=S.habits.find(x=>x.id===hid);
+  // Anlass ohne offenes Fenster direkt als erledigt eingetragen: das Fenster entsteht dabei von selbst
+  if(hh&&hh.schedule==='event'&&val==='g'&&cur!==val&&!winAt(hh,parse(date)))eventAdd(hh,date);
   setE(hid,sid,date,cur===val?undefined:val);
   const row=btn.closest('.sit-row');
   row.querySelectorAll('.choice').forEach(c=>c.classList.remove('sel'));
@@ -2063,7 +2208,7 @@ function dayFullyDecided(date){
   let hs;
   if(curGroupDay&&curGroupDay.date===date){
     const g=S.groups.find(x=>x.id===curGroupDay.gid);if(!g)return false;
-    hs=groupHabits(g).filter(x=>isSchedDay(x,parse(date)));
+    hs=groupHabits(g).filter(x=>countsOn(x,parse(date)));
   }else if(curDay&&curDay.date===date){
     const h=S.habits.find(x=>x.id===curDay.hid);if(!h)return false;
     hs=[h];
@@ -2112,7 +2257,7 @@ let editIconOpen=false,editMoreOpen=false;   // Symbol-Raster / "Mehr" aufgeklap
 function openHabitEditor(hid){
   const h=hid?S.habits.find(x=>x.id===hid):null;
   draft=h?JSON.parse(JSON.stringify(h)):{id:null,name:'',icon:'leaf',schedule:'daily',interval:2,weekdays:[0,1,2,3,4],
-    weeklyTarget:3,monthlyTarget:8,startDate:todayStr(),goalEnabled:false,goalN:30,celebrated:false,
+    weeklyTarget:3,monthlyTarget:8,biTarget:1,eventDays:3,events:[],skips:{},cue:'',startDate:todayStr(),goalEnabled:false,goalN:30,celebrated:false,
     situations:[{id:uid(),name:'Standard'}],reminders:{enabled:false,times:[]},
     note:'',archived:false,archivedAt:null,milestones:{stable:false,archive:false}};
   editIconOpen=false;
@@ -2148,10 +2293,27 @@ function renderEditor(){
       <button onclick="draft.monthlyTarget=Math.max(1,draft.monthlyTarget-1);renderEditor()">−</button>
       <div class="val">${d.monthlyTarget}</div><div class="unit">mal pro Monat</div>
       <button style="margin-left:auto" onclick="draft.monthlyTarget=Math.min(28,draft.monthlyTarget+1);renderEditor()">+</button></div>`;
+  }else if(d.schedule==='biweekly'){
+    rhythmCtrl=`<div style="margin-top:13px" class="stepper">
+      <button onclick="draft.biTarget=Math.max(1,draft.biTarget-1);renderEditor()">−</button>
+      <div class="val">${d.biTarget}</div><div class="unit">mal in 2 Wochen</div>
+      <button style="margin-left:auto" onclick="draft.biTarget=Math.min(14,draft.biTarget+1);renderEditor()">+</button></div>`;
+  }else if(d.schedule==='event'){
+    rhythmCtrl=`<div style="margin-top:13px" class="stepper">
+      <button onclick="draft.eventDays=Math.max(1,draft.eventDays-1);renderEditor()">−</button>
+      <div class="val">${d.eventDays}</div><div class="unit">${tageWort(d.eventDays)} Zeit</div>
+      <button style="margin-left:auto" onclick="draft.eventDays=Math.min(14,draft.eventDays+1);renderEditor()">+</button></div>`;
   }
+  const winKind=!!WIN_WORD[d.schedule];
+  const rhythmHint=d.schedule==='event'?'Du sagst der App, wann es ansteht – ab dann läuft die Frist. Dazwischen ist Ruhe.'
+    :winKind?'An welchen Tagen, entscheidest du. Die Gewohnheit steht von Anfang an in der Liste und meldet sich erst, wenn es eng wird.'
+    :'Wie oft du die Gewohnheit tun willst, damit du im Soll bist.';
+  const cueField=winKind?`<div class="field"><label>Auslöser<span class="opt"> · optional</span></label>
+      <input class="inp" value="${esc(d.cue||'')}" placeholder="${d.schedule==='event'?'z. B. wenn der Korb voll ist':'z. B. direkt nach der Uni'}" oninput="draft.cue=this.value">
+      <div class="hint">Woran du es festmachst, wenn es keinen festen Tag gibt.</div></div>`:'';
 
   // --- End-goal control ---
-  const gUnit=d.schedule==='weekly'?'Wochen in Folge':d.schedule==='monthly'?'Monate in Folge':'Tage am Stück';
+  const gUnit=WIN_WORD[d.schedule]?WIN_WORD[d.schedule][1]+' in Folge':'Tage am Stück';
   const goalCtrl=d.goalEnabled?`
     <div style="margin-top:13px" class="stepper">
       <button onclick="draft.goalN=Math.max(1,draft.goalN-1);renderEditor()">−</button>
@@ -2224,19 +2386,29 @@ function renderEditor(){
     <div class="esec">Rhythmus</div>
     <div class="field" style="margin-bottom:14px">
       <select class="inp" onchange="setSchedule(this.value)">
+        <optgroup label="An festen Tagen">
         <option value="daily" ${d.schedule==='daily'?'selected':''}>Jeden Tag</option>
-        <option value="everyN" ${d.schedule==='everyN'?'selected':''}>Alle paar Tage</option>
         <option value="weekdays" ${d.schedule==='weekdays'?'selected':''}>Bestimmte Wochentage</option>
-        <option value="weekly" ${d.schedule==='weekly'?'selected':''}>X-mal pro Woche</option>
-        <option value="monthly" ${d.schedule==='monthly'?'selected':''}>X-mal pro Monat</option>
+        <option value="everyN" ${d.schedule==='everyN'?'selected':''}>Alle paar Tage</option>
+        </optgroup><optgroup label="Frei im Zeitraum">
+        <option value="weekly" ${d.schedule==='weekly'?'selected':''}>Pro Woche</option>
+        <option value="biweekly" ${d.schedule==='biweekly'?'selected':''}>In 2 Wochen</option>
+        <option value="monthly" ${d.schedule==='monthly'?'selected':''}>Pro Monat</option>
+        </optgroup><optgroup label="Bei Anlass">
+        <option value="event" ${d.schedule==='event'?'selected':''}>Wenn es ansteht</option>
+        </optgroup>
       </select>${rhythmCtrl}
-      <div class="hint" style="margin-top:10px">Wie oft du die Gewohnheit tun willst, damit du im Soll bist.</div>
+      <div class="hint" style="margin-top:10px">${rhythmHint}</div>
     </div>
+    ${cueField}
 
     <button class="primary" onclick="saveHabit()">${d.id?'Speichern':'Gewohnheit anlegen'}</button>
     ${moreBox}`;
 }
-function setSchedule(v){draft.schedule=v;
+function setSchedule(v){
+  // neu gewaehlter Zeitraum startet mit einem vorsichtigen Soll
+  if(v!==draft.schedule&&!draft.id){if(v==='weekly')draft.weeklyTarget=2;if(v==='monthly')draft.monthlyTarget=2;}
+  draft.schedule=v;
   if(v==='weekdays'&&!draft.weekdays.length)draft.weekdays=[0,1,2,3,4];
   if(v==='everyN'){if(!draft.interval||draft.interval<2)draft.interval=2;draft.startDate=todayStr();}
   renderEditor();}
@@ -2247,6 +2419,7 @@ function saveHabit(){
   d.situations=d.situations.filter((s,i)=>s.name.trim()||d.situations.length===1);
   d.situations.forEach((s,i)=>{if(!s.name.trim())s.name=d.situations.length>1?('Situation '+(i+1)):'Standard';});
   d.note=String(d.note||'').replace(/\s+$/,'');
+  d.cue=String(d.cue||'').trim();
   const isNew=!d.id;
   if(d._fromIdea){S.ideas=S.ideas.filter(i=>i.id!==d._fromIdea);delete d._fromIdea;}
   if(!isNew){const idx=S.habits.findIndex(x=>x.id===d.id);S.habits[idx]=d;}
@@ -2381,7 +2554,9 @@ function ideaDragEnd(){
 
 /* Archiv */
 function fmtShort(d){return d.toLocaleDateString('de-DE',{day:'numeric',month:'short'});}
-function lifeRate(h){let g=0,r=0;const start=habitStart(h);const end=h.archivedAt?parse(h.archivedAt):today();
+function lifeRate(h){
+  if(isWin(h)){const ev=winEval(h);return ev.length?Math.round(ev.filter(x=>x==='ok').length/ev.length*100):0;}
+  let g=0,r=0;const start=habitStart(h);const end=h.archivedAt?parse(h.archivedAt):today();
   for(let d=new Date(start);d<=end;d=addDays(d,1)){if(!isSchedDay(h,d))continue;const st=dayFull(h,ds(d));
     if(st==='g')g++;else if(st!=='o'&&ds(d)!==todayStr())r++;}
   return (g+r)?Math.round(g/(g+r)*100):0;}
@@ -2653,9 +2828,11 @@ function previewDemo(){
   const D=n=>ds(addDays(today(),-n));const habits=[],entries={};
   const mk=(id,name,icon,ago,o)=>{o=o||{};const sid=id+'s';
     habits.push({id,name,icon,schedule:o.schedule||'daily',interval:2,weekdays:[0,1,2,3,4],weeklyTarget:o.weeklyTarget||3,monthlyTarget:8,
+      biTarget:1,eventDays:o.eventDays||3,events:o.events||[],skips:o.skips||{},cue:o.cue||'',
       startDate:D(ago),goalEnabled:!!o.goalN,goalN:o.goalN||30,celebrated:false,situations:[{id:sid,name:'Standard'}],
       reminders:{enabled:false,times:[]},note:o.note||'',archived:!!o.arch,archivedAt:o.arch?D(o.arch):null});
-    const e={};for(let i=ago;i>=(o.arch||1);i--){const v=(o.days&&i in o.days)?o.days[i]:'g';if(v)e[D(i)]=v;}
+    const e={};if(o.only)o.only.forEach(i=>{e[D(i)]='g';});
+    else for(let i=ago;i>=(o.arch||1);i--){const v=(o.days&&i in o.days)?o.days[i]:'g';if(v)e[D(i)]=v;}
     if(o.today)e[D(0)]=o.today;entries[id]={[sid]:e};};
   mk('d1','Hygiene-Routine','tooth',75,{arch:6,days:{40:'o',22:null},note:'Abends:\n- Zahnseide\n- Zähne putzen\n- Gesicht waschen\n- Lippen eincremen'});
   mk('d2','Wäsche sofort wegräumen','clean',62,{days:{50:'r',31:'o'},today:'g',note:'Ich erledige Dinge direkt.'});
@@ -2664,6 +2841,12 @@ function previewDemo(){
   mk('d5','Kein Handy auf dem Klo','phoneoff',13,{days:{9:'r',4:null},today:'g'});
   mk('d6','Anki öffnen','brain',10,{days:{5:'r'},today:'g'});
   mk('d7','Chinesisch-App öffnen','book',10,{days:{7:null,2:'o'}});
+  // nicht an einen Tag gebunden: zweimal pro Woche (frei im Zeitraum) und eine Sache "wenn es ansteht"
+  const wdT=wd(today()),sk=ds(addDays(mondayOf(today()),-21));
+  mk('d8','Sport','run',40,{schedule:'weekly',weeklyTarget:2,cue:'direkt nach der Uni',skips:{[sk]:true},
+    only:[wdT+34,wdT+31,wdT+26,wdT+24,wdT+12,wdT+9,wdT+5,wdT+2].concat(wdT>=1?[wdT-0]:[])});
+  mk('d9','Wäsche waschen','clean',30,{schedule:'event',eventDays:3,cue:'wenn der Korb voll ist',
+    events:[{start:D(24),days:3},{start:D(13),days:3},{start:D(1),days:3}],only:[23,11]});
   const st=S.settings;
   S=Object.assign(JSON.parse(JSON.stringify(DEFAULT)),{habits,entries,nextId:100,
     ideas:[{id:'di1',text:'Direkt nach dem Essen abspülen',note:'',prio:'high'},{id:'di2',text:'Handy nicht ins Bett',note:'',prio:'high'},
