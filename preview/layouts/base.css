@@ -1,0 +1,51 @@
+/* Gemeinsame Grundlage der Layout-Prototypen: bewusst neutral, damit das LAYOUT beurteilt wird, nicht der Stil.
+   Einbinden mit <link rel="stylesheet" href="base.css">. Eigene Regeln kommen in die Datei des Prototyps. */
+:root{
+  --bg:#f4f3ef; --surface:#ffffff; --surface-2:#ecebe6; --surface-3:#e0ded7;
+  --ink:#23211d; --ink-soft:#4d4a44; --muted:#6c685f; --faint:#9a958a;
+  --line:rgba(35,33,29,.10); --line-2:rgba(35,33,29,.18);
+  --accent:#4d7a68; --accent-soft:#e2ebe6; --accent-ink:#2f5648; --on-accent:#fff;
+  --g:#6fae6e; --o:#c98a3a; --r:#b5533f; --on-state:#fff;
+  --radius:14px; --radius-sm:10px;
+  --safe-top:env(safe-area-inset-top,0px); --safe-bottom:env(safe-area-inset-bottom,0px);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#141412; --surface:#1e1d1a; --surface-2:#282623; --surface-3:#33302c;
+  --ink:#ece8e1; --ink-soft:#c6c1b8; --muted:#a09a8f; --faint:#6e695f;
+  --line:rgba(255,255,255,.09); --line-2:rgba(255,255,255,.17);
+  --accent:#7fae99; --accent-soft:#24312b; --accent-ink:#a3cbb9; --on-accent:#10201a;
+  --g:#6fae6e; --o:#d09a4e; --r:#c9685a; --on-state:#10140f;
+}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:pointer}
+svg{display:block}
+h1,h2,h3,p{margin:0}
+.num{font-variant-numeric:tabular-nums}
+
+/* Abhak-Kachel: 44 px, vier Zustaende. Klassen: .tile, dazu .g / .o / .r oder nichts (offen) */
+.tile{width:44px;height:44px;border-radius:12px;flex-shrink:0;display:grid;place-items:center;
+  background:var(--surface-2);box-shadow:inset 0 0 0 1.5px var(--line-2);color:var(--on-state);transition:background .18s,transform .12s}
+.tile:active{transform:scale(.94)}
+.tile.g{background:var(--g);box-shadow:none}
+.tile.o{background:var(--o);box-shadow:none}
+.tile.r{background:var(--r);box-shadow:none}
+.tile svg{width:22px;height:22px;stroke-width:2.6}
+
+/* Fortschritts-Pfad: Start -> Marke "Stabil" -> Ende "Archiv-reif"
+   <div class="pfad"><i style="width:65%"></i><b class="on" style="left:35%"></b><b class="end"></b></div> */
+.pfad{position:relative;height:3px;border-radius:2px;background:var(--surface-3);margin-right:4px}
+.pfad i{position:absolute;left:0;top:0;bottom:0;border-radius:inherit;background:var(--accent)}
+.pfad b{position:absolute;top:50%;width:7px;height:7px;border-radius:50%;transform:translate(-50%,-50%);
+  background:var(--surface);border:1.5px solid var(--faint)}
+.pfad b.end{left:100%}
+.pfad b.on{background:var(--accent);border-color:var(--accent)}
+.pfad.big{height:6px;border-radius:3px}
+.pfad.big b{width:13px;height:13px;border-width:2px}
+
+/* kleiner Zustandspunkt fuer Wochen-/Verlaufsraster: <i class="dot g"></i> */
+.dot{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--surface-3)}
+.dot.g{background:var(--g)} .dot.o{background:var(--o)} .dot.r{background:var(--r)}
