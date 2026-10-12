@@ -1016,8 +1016,14 @@ function nextCelebration(){
   const later=`<button class="danger-btn" onclick="nextCelebration()">Weiter tracken</button>`;
   if(it.kind==='goal'){
     kicker='Ziel erreicht';title=`${h.goalN} ${goalUnit(h)}!`;
-    text=`<b>${esc(h.name)}</b> – du hast durchgezogen. Wenn die Gewohnheit jetzt sitzt, kannst du sie ins Archiv legen.`;
-    btns=`<button class="primary" onclick="archiveHabit('${h.id}');nextCelebration()">Archivieren</button>${later}`;
+    const a=archiveInfo(h);
+    if(a.met){
+      text=`<b>${esc(h.name)}</b> – du hast durchgezogen. Sie ist auch Archiv-reif, du kannst sie jetzt archivieren.`;
+      btns=`<button class="primary" onclick="archiveHabit('${h.id}');nextCelebration()">Archivieren</button>${later}`;
+    }else{
+      text=`<b>${esc(h.name)}</b> – du hast durchgezogen. Fürs Archiv ist es noch zu früh. ${archiveReason(a)}`;
+      btns=`<button class="primary" onclick="nextCelebration()">Weiter tracken</button>`;
+    }
   }else if(it.kind==='stable'){
     const s=stableInfo(h);kicker='Meilenstein';title='Stabil!';
     text=`<b>${esc(h.name)}</b> sitzt: seit ${s.days} Tagen dabei, die letzten ${s.window} ohne Lücke. Zeit, eine neue Gewohnheit dazuzunehmen.`;
@@ -1801,8 +1807,6 @@ function lifeRate(h){let g=0,r=0;const start=habitStart(h);const end=h.archivedA
   for(let d=new Date(start);d<=end;d=addDays(d,1)){if(!isSchedDay(h,d))continue;const st=dayFull(h,ds(d));
     if(st==='g')g++;else if(st!=='o'&&ds(d)!==todayStr())r++;}
   return (g+r)?Math.round(g/(g+r)*100):0;}
-function archDays(h){const end=h.archivedAt?parse(h.archivedAt):today();
-  return Math.max(1,Math.round((new Date(end.getFullYear(),end.getMonth(),end.getDate())-habitStart(h))/86400000)+1);}
 function archiveHTML(){
   const list=S.habits.filter(h=>h.archived).sort((a,b)=>(b.archivedAt||'').localeCompare(a.archivedAt||''));
   if(!list.length)return `<div class="empty" style="padding:44px 24px"><div class="ico">${svgIcon('star')}</div>
@@ -1811,19 +1815,19 @@ function archiveHTML(){
     list.map(h=>`<button class="arch-card" onclick="openArchived('${h.id}')">
       <div class="ico-tile">${svgIcon(h.icon)}</div>
       <div class="ab"><div class="an">${esc(h.name)}</div>
-        <div class="ad">${fmtShort(habitStart(h))} – ${fmtShort(parse(h.archivedAt||todayStr()))} · ${archDays(h)} Tage</div></div>
+        <div class="ad">seit ${fmtShort(habitStart(h))} · ${habitAge(h)} ${tageWort(habitAge(h))} dabei</div></div>
       <div class="ap">${lifeRate(h)}%</div></button>`).join('');
 }
 function openArchived(hid){const h=S.habits.find(x=>x.id===hid);if(!h)return;
   document.getElementById('sheetTitle').textContent=h.name;
   document.getElementById('sheetBody').innerHTML=`
     <div class="de-date" style="text-transform:none">Archiviert am ${fmtLong(parse(h.archivedAt||todayStr()))}</div>
-    <div class="arch-sum"><div><b>${archDays(h)}</b><span>Tage dabei</span></div>
+    <div class="arch-sum"><div><b>${habitAge(h)}</b><span>${tageWort(habitAge(h))} dabei</span></div>
       <div><b>${lifeRate(h)}%</b><span>Erfolgsquote</span></div></div>
     ${h.note&&h.note.trim()?`<div class="field"><label>${noteLabel(h.note)}</label><div class="note-box rich">${noteHTML(h.note)}</div></div>`:''}
     ${renderYear(h)}
     ${h.check&&!h.check.off
-      ?`<div class="hint" style="margin:-2px 0 10px">Nächste Rückfrage am ${fmtShort(parse(h.check.due))}.
+      ?`<div class="hint" style="margin:-2px 0 10px">Nächste Rückfrage am ${fmtShort(parse(h.check.due)).replace(/\.$/,'')}.
         <button class="add-inline" style="display:inline;padding:0;margin-left:4px" onclick="recallOff('${h.id}')">Nicht mehr fragen</button></div>`
       :`<div class="hint" style="margin:-2px 0 10px">Keine Rückfragen zu dieser Gewohnheit.
         <button class="add-inline" style="display:inline;padding:0;margin-left:4px" onclick="recallOn('${h.id}')">Wieder nachfragen</button></div>`}
