@@ -1748,9 +1748,14 @@ function nextCelebration(){
     btns=`<button class="primary" onclick="nextCelebration()">Weiter</button>`;
   }else if(it.kind==='stable'){
     kicker='Meilenstein';title='Stabil!';
-    text=`<b>${esc(h.name)}</b> sitzt. Jetzt ist Platz für eine neue Gewohnheit.`;
-    btns=`<button class="primary" onclick="nextCelebration();openIdeasTab()">Zu meinen Ideen</button>
-      <button class="danger-btn" onclick="nextCelebration()">Später</button>`;
+    // Tempo: eine neue Gewohnheit erst vorschlagen, wenn hoechstens zwei andere noch im Aufbau sind
+    const building=activeHabits().filter(x=>x.id!==h.id&&fortschritt(x).phase==='build').length;
+    const room=building<=2;
+    text=`<b>${esc(h.name)}</b> sitzt. `+(room?'Jetzt ist Platz für eine neue Gewohnheit.'
+      :`Es sind noch ${building} andere im Aufbau – lass die erst sitzen, bevor du eine neue startest.`);
+    btns=room?`<button class="primary" onclick="nextCelebration();openIdeasTab()">Zu meinen Ideen</button>
+      <button class="danger-btn" onclick="nextCelebration()">Später</button>`
+      :`<button class="primary" onclick="nextCelebration()">Weiter</button>`;
   }else{
     const a=archiveInfo(h);kicker='Meilenstein';title='Archiv-reif!';
     text=a.win?`<b>${esc(h.name)}</b> läuft von allein – ${a.ok} der letzten ${a.n} ${WIN_WORD[h.schedule][1]} geschafft. Du kannst sie jetzt archivieren.`
