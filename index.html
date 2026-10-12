@@ -844,13 +844,11 @@ function habitStart(h){
   Object.values(e).forEach(m=>Object.keys(m).forEach(k=>{if(k<first)first=k;}));
   return parse(first);
 }
-// Erledigte (gruene) Tage seit Beginn - Grundlage fuer Stabil/Archiv-reif.
-// Kalendertage allein sagen zu wenig: 21 Tage dabei, aber nur 12 erledigt, ist noch nicht stabil.
-function greenDays(h){
-  const dates=new Set();
-  Object.values(S.entries[h.id]||{}).forEach(m=>Object.keys(m).forEach(k=>dates.add(k)));
-  let n=0;dates.forEach(k=>{if(dayFull(h,k)==='g')n++;});
-  return n;
+// "Dabei seit": Alter der Gewohnheit in Kalendertagen (erster Tag und heute zaehlen mit) -
+// Grundlage fuer Stabil/Archiv-reif. Ob sie auch laeuft, pruefen die Fenster in recentPeriods().
+function habitAge(h){
+  const t=today();
+  return Math.max(1,Math.round((new Date(t.getFullYear(),t.getMonth(),t.getDate())-habitStart(h))/86400000)+1);
 }
 // Streak nach "nie zweimal auslassen": gezaehlt werden erledigte geplante Tage.
 // Ein einzelner verpasster Tag zaehlt nicht mit, bricht aber nicht - erst zwei
@@ -930,26 +928,26 @@ function recentPeriods(h,days){
   return out;
 }
 function stableInfo(h){const c=S.settings;const p=recentPeriods(h,c.stableWindow);
-  const clean=!p.includes('miss')&&p.includes('ok');const days=greenDays(h);
+  const clean=!p.includes('miss')&&p.includes('ok');const days=habitAge(h);
   return {days,minDays:c.stableMinDays,window:c.stableWindow,clean,met:days>=c.stableMinDays&&clean};}
 function archiveInfo(h){const c=S.settings;const p=recentPeriods(h,c.archiveWindow);
   const ok=p.filter(x=>x==='ok').length,miss=p.filter(x=>x==='miss').length;
-  const rate=(ok+miss)?Math.round(ok/(ok+miss)*100):0;const days=greenDays(h);
+  const rate=(ok+miss)?Math.round(ok/(ok+miss)*100):0;const days=habitAge(h);
   return {days,minDays:c.archiveMinDays,window:c.archiveWindow,pct:c.archivePct,rate,
     met:days>=c.archiveMinDays&&(ok+miss)>0&&rate>=c.archivePct};}
 // Klartext, warum ein Meilenstein erreicht ist - oder was noch fehlt
 function tageWort(n){return n===1?'Tag':'Tage';}
 function stableReason(s){
-  if(s.met)return `Weil: ${s.days} erledigte Tage und die letzten ${s.window} Tage ohne Lücke.`;
+  if(s.met)return `Weil: seit ${s.days} Tagen dabei und die letzten ${s.window} Tage ohne Lücke.`;
   const miss=[];
-  if(s.days<s.minDays)miss.push(`noch ${s.minDays-s.days} erledigte ${tageWort(s.minDays-s.days)}`);
+  if(s.days<s.minDays)miss.push(`noch ${s.minDays-s.days} ${tageWort(s.minDays-s.days)} dabei bleiben`);
   if(!s.clean)miss.push(`die letzten ${s.window} Tage ohne Lücke`);
   return 'Fehlt: '+miss.join(' und ')+'.';
 }
 function archiveReason(a){
-  if(a.met)return `Weil: ${a.days} erledigte Tage und ${a.rate} % in den letzten ${a.window} Tagen.`;
+  if(a.met)return `Weil: seit ${a.days} Tagen dabei und ${a.rate} % in den letzten ${a.window} Tagen.`;
   const miss=[];
-  if(a.days<a.minDays)miss.push(`noch ${a.minDays-a.days} erledigte ${tageWort(a.minDays-a.days)}`);
+  if(a.days<a.minDays)miss.push(`noch ${a.minDays-a.days} ${tageWort(a.minDays-a.days)} dabei bleiben`);
   if(a.rate<a.pct)miss.push(`mind. ${a.pct} % in den letzten ${a.window} Tagen (gerade ${a.rate} %)`);
   return 'Fehlt: '+miss.join(' und ')+'.';
 }
@@ -1022,12 +1020,12 @@ function nextCelebration(){
     btns=`<button class="primary" onclick="archiveHabit('${h.id}');nextCelebration()">Archivieren</button>${later}`;
   }else if(it.kind==='stable'){
     const s=stableInfo(h);kicker='Meilenstein';title='Stabil!';
-    text=`<b>${esc(h.name)}</b> sitzt: ${s.days} erledigte Tage, die letzten ${s.window} ohne Lücke. Zeit, eine neue Gewohnheit dazuzunehmen.`;
+    text=`<b>${esc(h.name)}</b> sitzt: seit ${s.days} Tagen dabei, die letzten ${s.window} ohne Lücke. Zeit, eine neue Gewohnheit dazuzunehmen.`;
     btns=`<button class="primary" onclick="nextCelebration();openIdeasTab()">Zu meinen Ideen</button>
       <button class="danger-btn" onclick="nextCelebration()">Später</button>`;
   }else{
     const a=archiveInfo(h);kicker='Meilenstein';title='Archiv-reif!';
-    text=`<b>${esc(h.name)}</b> läuft von allein – ${a.days} erledigte Tage und ${a.rate}&nbsp;% in den letzten ${a.window} Tagen. Du kannst sie jetzt archivieren.`;
+    text=`<b>${esc(h.name)}</b> läuft von allein – seit ${a.days} Tagen dabei und ${a.rate}&nbsp;% in den letzten ${a.window} Tagen. Du kannst sie jetzt archivieren.`;
     btns=`<button class="primary" onclick="archiveHabit('${h.id}');nextCelebration()">Archivieren</button>${later}`;
   }
   document.getElementById('celCard').innerHTML=`
@@ -1610,12 +1608,12 @@ function renderEditor(){
       <div class="ms-row"><div class="ms-top"><b>Stabil</b>${st.met?'<span class="ok">✓ erreicht</span>':'<span class="no">noch nicht</span>'}</div>
         <div class="ms-why">${stableReason(st)}</div>
         <div class="gb-track"><i style="width:${Math.min(100,st.days/st.minDays*100)}%"></i></div>
-        <div class="ms-line"><span>Erledigte Tage (mind. ${st.minDays})</span><span class="${st.days>=st.minDays?'y':''}">${st.days}</span></div>
+        <div class="ms-line"><span>Dabei seit (mind. ${st.minDays} Tage)</span><span class="${st.days>=st.minDays?'y':''}">${st.days} ${tageWort(st.days)}</span></div>
         <div class="ms-line"><span>Letzte ${st.window} Tage ohne Aussetzer</span><span class="${st.clean?'y':''}">${st.clean?'ja':'nein'}</span></div></div>
       <div class="ms-row"><div class="ms-top"><b>Archiv-reif</b>${ar.met?'<span class="ok">✓ erreicht</span>':'<span class="no">noch nicht</span>'}</div>
         <div class="ms-why">${archiveReason(ar)}</div>
         <div class="gb-track"><i style="width:${Math.min(100,ar.days/ar.minDays*100)}%"></i></div>
-        <div class="ms-line"><span>Erledigte Tage (mind. ${ar.minDays})</span><span class="${ar.days>=ar.minDays?'y':''}">${ar.days}</span></div>
+        <div class="ms-line"><span>Dabei seit (mind. ${ar.minDays} Tage)</span><span class="${ar.days>=ar.minDays?'y':''}">${ar.days} ${tageWort(ar.days)}</span></div>
         <div class="ms-line"><span>Quote letzte ${ar.window} Tage (mind. ${ar.pct} %)${unitW!=='Tage'?' – in '+unitW:''}</span><span class="${ar.rate>=ar.pct?'y':''}">${ar.rate} %</span></div></div>
     </div><div class="hint">Stabil → Zeit für eine neue Gewohnheit. Archiv-reif → sie läuft von allein. Die Schwellen änderst du in den Einstellungen unter „Erweitert“.</div></div>`;
   }
@@ -1896,8 +1894,8 @@ kcard('mountain','Dranbleiben','Wenn die Motivation nachlässt',`
 kcard('star','Die Regeln dieser App','So benutzt du Cadence',`
   <ul><li><b>Wenige gleichzeitig:</b> Lieber 5 Gewohnheiten, die sitzen, als 15 halbe.</li>
   <li><b>Nie zweimal:</b> Einmal verpasst hält den Streak am Leben, zweimal in Folge setzt ihn zurück. Orange (entschuldigt) zählt nie als verpasst.</li>
-  <li><b>Stabil</b> (Standard: mind. 21 erledigte Tage, letzte 14 Tage ohne Aussetzer) → hol dir die nächste Idee.</li>
-  <li><b>Archiv-reif</b> (Standard: mind. 60 erledigte Tage, mind. 90 % in den letzten 30 Tagen) → ins Archiv, sie läuft von allein.</li>
+  <li><b>Stabil</b> (Standard: seit mind. 21 Tagen dabei, letzte 14 Tage ohne Aussetzer) → hol dir die nächste Idee.</li>
+  <li><b>Archiv-reif</b> (Standard: seit mind. 60 Tagen dabei, mind. 90 % in den letzten 30 Tagen) → ins Archiv, sie läuft von allein.</li>
   <li><b>Ideen parken:</b> Neue Einfälle landen sofort in den Ideen. Das hält den Kopf frei.</li>
   <li>Die Schwellen änderst du unter Einstellungen → Meilensteine → Erweitert.</li></ul>`);
 
@@ -1960,9 +1958,9 @@ function renderYear(h){
 /* ---------- SETTINGS ---------- */
 let msOpen=false;   // Meilenstein-Schwellen sind standardmaessig eingeklappt
 const MS_FIELDS=[
-  ['stableMinDays','Stabil: erledigte Tage','mindestens',7,120,1],
+  ['stableMinDays','Stabil: dabei seit','mindestens Tage',7,120,1],
   ['stableWindow','Stabil: ohne Aussetzer','letzte Tage',3,60,1],
-  ['archiveMinDays','Archiv-reif: erledigte Tage','mindestens',14,365,5],
+  ['archiveMinDays','Archiv-reif: dabei seit','mindestens Tage',14,365,5],
   ['archiveWindow','Archiv-reif: Quote über','letzte Tage',7,120,1],
   ['archivePct','Archiv-reif: Quote mind.','%',50,100,5]];
 function renderSettings(){
