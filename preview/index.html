@@ -327,6 +327,7 @@ svg{display:block}
 .empty .ico svg{width:28px;height:28px;stroke:var(--accent-ink);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .empty h2{font-family:var(--font-display);font-weight:500;font-size:22px;color:var(--ink);margin:0 0 6px}
 .empty p{font-size:14px;margin:0 0 22px;line-height:1.55}
+.section-label.tsec{margin:16px 6px 8px}
 .section-label{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:20px 6px 11px}
 
 /* ---- Nav ---- */
@@ -808,8 +809,10 @@ textarea.inp{resize:vertical;min-height:74px;line-height:1.45;font-size:16px}
    Schriften und Zustandsfarben kommen vom Original. Hilfs-Tokens beginnen mit --gl-.
    Akzente setzen nur die Palette (--l-* hell, --d-* dunkel); die drei Modus-Bloecke ordnen sie zu. */
 :root[data-style="glas"]{
-  /* Regler des Glas-Stils: 1 = Grundeinstellung. Varianten ([data-var]) setzen nur diese Werte, Schrift und Rundung. */
-  --v-gloss:1; --v-rim:1; --v-fill:1; --v-blur:1; --v-sat:175%; --v-blob:1; --v-drop:1; --v-edge:1;
+  /* Regler des Glas-Stils (Milchglas: kein Glanz, schwacher Rand, milchige Fuellung, starke Unschaerfe).
+     1 waere das erste, glaenzende Glas; die Regler skalieren Glanz, Rand, Fuellung, Unschaerfe, Farbfeld, Schatten, Kante. */
+  --v-gloss:0; --v-rim:.35; --v-fill:2.1; --v-blur:1.6; --v-sat:120%; --v-blob:.8; --v-drop:1; --v-edge:1;
+  --font-display:"Manrope",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   --gl-field:radial-gradient(64% 46% at 4% 0%,var(--gl-b1),transparent 72%),
     radial-gradient(58% 42% at 106% 28%,var(--gl-b2),transparent 72%),
     radial-gradient(66% 42% at -8% 68%,var(--gl-b3),transparent 72%),
@@ -1156,36 +1159,9 @@ textarea.inp{resize:vertical;min-height:74px;line-height:1.45;font-size:16px}
 }
 
 
-/* --- Varianten des Glas-Stils (Auswahl in der Vorschau): nur Regler, Farbfeld, Rundung und Schrift --- */
-:root[data-style="glas"][data-var="2"]{--v-gloss:0.45; --v-rim:0.6}   /* Ruhig */
-:root[data-style="glas"][data-var="3"]{--v-gloss:0.12; --v-rim:0.4; --v-fill:1.5; --v-blur:1.3; --v-sat:140%}   /* Matt */
-:root[data-style="glas"][data-var="4"]{--v-gloss:0; --v-rim:0.35; --v-fill:2.1; --v-blur:1.6; --v-sat:120%; --v-blob:0.8; --font-display:"Manrope",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Milchglas */
-:root[data-style="glas"][data-var="5"]{--v-gloss:0.3; --v-rim:0.7; --v-fill:0.45; --v-blur:0.5; --v-sat:190%}   /* Klar */
-:root[data-style="glas"][data-var="6"]{--v-gloss:0; --v-rim:0.2; --v-fill:2.6; --v-blob:0.45; --v-drop:0.6; --rs:1.0; --font-display:"Newsreader",serif; --font-body:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Papier */
-:root[data-style="glas"][data-var="7"]{--v-gloss:0.25; --v-rim:0.5; --v-fill:1.2; --v-blob:0.7; --gl-field:linear-gradient(155deg,var(--gl-b1),transparent 46%),linear-gradient(335deg,var(--gl-b3),transparent 52%),linear-gradient(60deg,var(--gl-b2),transparent 40%); --font-display:"Fraunces",serif; --font-body:"Figtree",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Seide */
-:root[data-style="glas"][data-var="8"]{--v-gloss:0.2; --v-rim:0.45; --v-fill:1.3; --gl-field:linear-gradient(180deg,var(--gl-b1),transparent 42%),linear-gradient(0deg,var(--gl-b4),transparent 38%); --font-display:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Horizont */
-:root[data-style="glas"][data-var="9"]{--v-gloss:0.35; --v-rim:0.55; --v-fill:0.9; --v-blob:1.15; --v-sat:200%; --gl-field:radial-gradient(120% 28% at 50% 12%,var(--gl-b1),transparent 70%),radial-gradient(120% 26% at 30% 46%,var(--gl-b3),transparent 70%),radial-gradient(120% 26% at 70% 80%,var(--gl-b2),transparent 70%); --font-display:"Outfit",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:"Outfit",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Aurora */
-:root[data-style="glas"][data-var="10"]{--v-gloss:0.1; --v-rim:0.3; --v-fill:1.7; --v-blur:1.8; --v-blob:0.5; --v-drop:0.5; --font-display:"DM Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:"DM Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Nebel */
-:root[data-style="glas"][data-var="11"]{--v-gloss:0; --v-rim:0.25; --v-edge:2.2; --v-fill:1.4; --v-drop:0.35; --rs:0.85; --font-display:"Space Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Kante */
-:root[data-style="glas"][data-var="12"]{--v-gloss:0.2; --v-rim:0.45; --v-fill:1.5; --v-drop:1.2; --rs:1.6; --font-display:"Nunito",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:"Nunito",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Weich */
-:root[data-style="glas"][data-var="13"]{--v-gloss:0; --v-rim:0.3; --v-fill:1.9; --v-blob:0.3; --v-drop:0.45; --rs:1.1; --font-display:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Schlicht */
-:root[data-style="glas"][data-var="14"]{--v-gloss:0.12; --v-rim:0.4; --v-fill:1.6; --v-blob:0.55; --rs:1.0; --font-display:"Playfair Display",serif; --font-body:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Editorial */
-:root[data-style="glas"][data-var="15"]{--v-gloss:0.2; --v-rim:0.5; --v-fill:0.8; --v-drop:1.6; --v-blur:1.2; --font-display:"Sora",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:"Sora",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Tiefe */
-:root[data-style="glas"][data-var="16"]{--v-gloss:0.55; --v-rim:0.8; --v-fill:1.6; --v-blob:0.6; --v-sat:130%; --gl-field:radial-gradient(130% 50% at 50% -10%,var(--gl-b3),transparent 70%),radial-gradient(90% 40% at 100% 100%,var(--gl-b2),transparent 72%); --font-display:"Lora",serif}   /* Perle */
-:root[data-style="glas"][data-var="17"]{--v-gloss:0.15; --v-rim:0.35; --v-fill:0.7; --v-blob:1.3; --v-sat:210%; --font-display:"Bricolage Grotesque",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Tinte */
-:root[data-style="glas"][data-var="18"]{--v-gloss:0.3; --v-rim:0.55; --v-fill:1.25; --rs:1.15; --font-display:"Urbanist",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:"Urbanist",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Rund */
-:root[data-style="glas"][data-var="19"]{--v-gloss:0.1; --v-rim:0.45; --v-fill:1.35; --v-blob:0.9; --gl-field:radial-gradient(90% 60% at 12% 0%,var(--gl-b1),transparent 70%); --font-display:"Geist",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:"Geist",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}   /* Studio */
-:root[data-style="glas"][data-var="20"]{--v-gloss:0.3; --v-rim:0.5; --v-fill:1.45; --v-blur:1.4; --v-blob:0.65; --v-drop:0.7}   /* Sanft */
-/* serifenlose Ueberschriften brauchen mehr Gewicht als die Serifenschrift */
-:root[data-dsans] :is(.head h1,.tghead .tname .n,.sheet-head h2,.empty h2,.mnav h2,.cel-card h2){font-weight:700;letter-spacing:-.02em}
-:root[data-dsans] :is(.tc-count,.hd-figs b,.st-fig .n,.st-big .n,.stepper .val,.hs .n,.arch-sum b,.arch-card .ap,.stat-card .sh .pct){font-weight:600}
-/* Varianten-Leiste der Vorschau */
-.pv-var{position:fixed;top:calc(var(--safe-top) + 5px);left:50%;transform:translateX(-50%);z-index:45;display:flex;align-items:center;gap:2px;
-  padding:3px;border-radius:999px;background:rgba(22,26,24,.86);color:#fff;font:600 12px/1 system-ui,-apple-system,sans-serif;box-shadow:0 4px 14px -4px rgba(0,0,0,.5)}
-.pv-var button{width:34px;height:30px;border-radius:999px;color:#fff;font-size:17px;line-height:1;display:grid;place-items:center}
-.pv-var button:active{background:rgba(255,255,255,.18)}
-.pv-var span{min-width:104px;text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums}
-:root.pv-on .head{margin-top:34px}
+/* Glas hat serifenlose Ueberschriften: die brauchen mehr Gewicht als die Serifenschrift */
+:root[data-style="glas"] :is(.head h1,.tghead .tname .n,.sheet-head h2,.empty h2,.mnav h2,.cel-card h2){font-weight:700;letter-spacing:-.02em}
+:root[data-style="glas"] :is(.tc-count,.hd-figs b,.st-fig .n,.st-big .n,.stepper .val,.hs .n,.arch-sum b,.arch-card .ap,.stat-card .sh .pct){font-weight:600}
 </style>
 </head>
 <body>
@@ -1412,6 +1388,7 @@ function isSchedDay(h,d){
 }
 // wie dueToday(), nur fuer ein beliebiges Datum (Tages-Checkliste mit Navigation)
 function dueOnDate(h,d){
+  if(ds(d)<ds(habitStart(h)))return false;   // vor dem Anlegen nichts faellig (sonst bleibt "gestern" offen)
   if(h.schedule==='daily')return true;
   if(h.schedule==='weekdays')return h.weekdays.includes(wd(d));
   if(h.schedule==='everyN')return isSchedDay(h,d);
@@ -1972,7 +1949,7 @@ function renderTrack(){
   html+=todayListHTML(viewDateStr,viewDate,now);
 
   html+=`<button class="add-btn" onclick="openHabitEditor()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Neue Gewohnheit</button>
-    <button class="add-btn" style="margin-top:8px" onclick="openGroupEditor()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Neue Gruppe</button>`;
+    ${GROUPS_ON?`<button class="add-btn" style="margin-top:8px" onclick="openGroupEditor()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Neue Gruppe</button>`:''}`;
   el.innerHTML=html;
   wkAnim='';
 }
@@ -2072,37 +2049,18 @@ function todayListHTML(dStr,viewDate,now){
   // (die stehen ab Fensterbeginn in der Liste, zaehlen aber erst zu "Dein Tag", wenn es eng wird)
   const shown=h=>week||isWin(h)||dueOnDate(h,viewDate)||h.situations.some(s=>getE(h.id,s.id,dStr)!==undefined);
   const head=week?wkHeadHTML(dStr):'';
-  let rows='',cards='';
-  S.groups.forEach(g=>{
-    if(!groupHabits(g).some(shown))return;
-    // Gruppenfeld: ein Segment je faelliger Gewohnheit, ohne Zahlen
-    const segs=groupHabits(g).filter(h=>countsOn(h,parse(dStr))).map(h=>{
-      const st=dayFull(h,dStr);return `<i class="${st==='g'||st==='o'||st==='r'?st:''}"></i>`;}).join('');
-    // jede Gruppe ist eine eigene Karte mit farbig abgesetzter Kopfzeile
-    cards+=`<div class="tlist tgroup ${g.collapsed?'closed':''}"><div class="trow tghead">
-      <button class="tchev" onclick="toggleGroup('${g.id}')"
-        aria-label="${g.collapsed?'Gruppe aufklappen':'Gruppe zuklappen'}">
-        <svg class="mchev ${g.collapsed?'':'open'}" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
-      </button>
-      <button class="trow-open" onclick="openGroupEditor('${g.id}')" aria-label="${esc(g.name)} bearbeiten">
-        <div class="ico-tile">${svgIcon(g.icon)}</div>
-        <div class="tname"><div class="n"><span>${esc(g.name)}</span></div></div>
-      </button>
-      <button class="tstatus" ${dis} onclick="openGroupDay('${g.id}','${dStr}')" aria-label="${esc(g.name)} tracken">${segs}</button>
-    </div>`;
-    if(!g.collapsed){
-      const mem=groupHabits(g).filter(shown);
-      if(week&&mem.length)cards+=head;
-      mem.forEach(h=>{cards+=todayHabitRowHTML(h,dStr,dis,false,isToday);});
-    }
-    cards+=`</div>`;
-  });
-  ungroupedHabits().filter(shown).forEach(h=>{rows+=todayHabitRowHTML(h,dStr,dis,false,isToday);});
-  if(!rows&&!cards)return `<div class="tlist"><div class="tempty">Für diesen Tag ist nichts geplant.</div></div>`;
-  return cards+(rows?`<div class="tlist">${head}${rows}</div>`:'');
+  // Gruppen sind vorerst aus (GROUPS_ON). Die Liste ordnet sich selbst: oben was noch im Aufbau ist,
+  // darunter was stabil laeuft. Faellt eine stabile Gewohnheit zurueck, wandert sie wieder nach oben.
+  const hs=activeHabits().filter(h=>shown(h)&&(!isWin(h)||week||dStr>=ds(habitStart(h))));
+  if(!hs.length)return `<div class="tlist"><div class="tempty">Für diesen Tag ist nichts geplant.</div></div>`;
+  const build=hs.filter(h=>fortschritt(h).phase==='build'),steady=hs.filter(h=>fortschritt(h).phase!=='build');
+  const card=(title,list)=>list.length?`<div class="section-label tsec">${title}</div><div class="tlist">${head}${list.map(h=>todayHabitRowHTML(h,dStr,dis,false,isToday)).join('')}</div>`:'';
+  return card('Im Aufbau',build)+card('Stabil',steady);
 }
 
 /* ---------- Groups ---------- */
+// Gruppen vorerst ausgeschaltet: Daten und Code bleiben, nur Anzeige und "Neue Gruppe" sind weg
+const GROUPS_ON=false;
 // how many members are due on `date`, and how many of those are settled (green or excused)
 function groupDayCounts(g,date){
   let due=0,done=0;
@@ -2913,7 +2871,7 @@ function previewDemo(){
     ideas:[{id:'di1',text:'Direkt nach dem Essen abspülen',note:'',prio:'high'},{id:'di2',text:'Handy nicht ins Bett',note:'',prio:'high'},
       {id:'di3',text:'Abends lesen',note:'',prio:'mid'}],
     groups:[{id:'dg1',name:'Lernen',icon:'brain',habitIds:['d6','d7'],collapsed:false}]});
-  S.settings.theme=st.theme;S.settings.style=st.style;S.settings.accent=st.accent;S.settings.variant=st.variant;
+  S.settings.theme=st.theme;S.settings.style=st.style;S.settings.accent=st.accent;
   save();location.reload();
 }
 function cycleTheme(){const o=['system','light','dark'];S.settings.theme=o[(o.indexOf(S.settings.theme)+1)%3];save();applyTheme();
@@ -3129,20 +3087,9 @@ const STYLES=[['glas','Glas'],['original','Klassisch']];
 const ACCENTS=[['salbei','Salbei'],['ozean','Ozean'],['flieder','Flieder'],['sand','Sand'],['rose','Rosé']];
 function styleName(){return S.settings.style==='original'?'original':'glas';}
 function accentName(){const a=S.settings.accent;return ACCENTS.some(x=>x[0]===a)?a:'salbei';}
-/* Varianten des Glas-Stils zum Aussuchen (Regler stehen im CSS unter [data-var]); 1 = Grundeinstellung */
-const VARIANTS=['Glas','Ruhig','Matt','Milchglas','Klar','Papier','Seide','Horizont','Aurora','Nebel','Kante','Weich','Schlicht','Editorial','Tiefe','Perle','Tinte','Rund','Studio','Sanft'];
-const VAR_DSANS=[4,8,9,10,11,12,13,15,17,18,19];          // Varianten mit serifenloser Ueberschrift
-const VAR_FONTS='https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Figtree:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Bricolage+Grotesque:wght@400;500;600;700&family=Urbanist:wght@400;500;600;700&family=Geist:wght@400;500;600;700&family=Newsreader:wght@400;500;600&family=Playfair+Display:wght@400;500;600&family=Lora:wght@400;500;600&display=swap';
-function variantNo(){const v=+S.settings.variant||1;return v>=1&&v<=VARIANTS.length?v:1;}
-function loadVariantFonts(){if(document.getElementById('varFonts'))return;
-  const l=document.createElement('link');l.id='varFonts';l.rel='stylesheet';l.href=VAR_FONTS;document.head.appendChild(l);}
-function setVariant(n){const N=VARIANTS.length;S.settings.variant=((n-1)%N+N)%N+1;save();applyStyle();updateVariantBar();}
-function updateVariantBar(){const el=document.getElementById('pvVarLbl');if(el)el.textContent=variantNo()+' · '+VARIANTS[variantNo()-1];}
-function applyStyle(){const s=styleName(),root=document.documentElement,v=variantNo();
+function applyStyle(){const s=styleName(),root=document.documentElement;
   if(s==='original'){root.removeAttribute('data-style');root.removeAttribute('data-accent');}
   else{root.setAttribute('data-style',s);root.setAttribute('data-accent',accentName());}
-  if(s!=='original'&&v>1){root.setAttribute('data-var',v);loadVariantFonts();}else root.removeAttribute('data-var');
-  if(s!=='original'&&VAR_DSANS.includes(v))root.setAttribute('data-dsans','');else root.removeAttribute('data-dsans');
   syncThemeColor();}
 // theme-color (steht im Deploy-Wrapper): in Klassisch unveraendert lassen, in Glas auf die Grundfarbe des Farbfelds setzen
 function syncThemeColor(){const metas=document.querySelectorAll('meta[name="theme-color"]');if(!metas.length)return;
@@ -3173,10 +3120,7 @@ function toast(msg,big){toastEl.textContent=msg;toastEl.className='toast show'+(
 /* ---------- Init ---------- */
 function renderAll(){renderTrack();document.getElementById('viewSub').textContent=titles.track[1]();}
 applyStyle();applyTheme();renderAll();staggerIn('track');
-if(PREVIEW){   // Vorschau: Leiste zum Durchblaettern der Design-Varianten
-  const b=document.createElement('div');b.className='pv-var';
-  b.innerHTML='<button onclick="setVariant(variantNo()-1)" aria-label="Vorherige Variante">‹</button><span id="pvVarLbl"></span><button onclick="setVariant(variantNo()+1)" aria-label="Nächste Variante">›</button>';
-  document.body.appendChild(b);document.documentElement.classList.add('pv-on');updateVariantBar();}
+if(PREVIEW){const b=document.createElement('div');b.className='pv-badge';b.textContent='Vorschau';document.body.appendChild(b);}
 clearNotifs();pushStatus();
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'){clearNotifs();pushStatus();}else pushStatus(true);});
